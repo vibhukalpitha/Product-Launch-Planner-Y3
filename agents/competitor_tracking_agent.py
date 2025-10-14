@@ -59,6 +59,25 @@ def simple_sentiment_analysis(text: str) -> float:
     return max(-1.0, min(1.0, sentiment * 10))  # Scale and clamp
 
 class CompetitorTrackingAgent:
+    def analyze_feedback_and_advise(self, feedback_list: list) -> str:
+        """
+        Analyze a list of feedback dicts and return actionable advice for improving our product.
+        Uses simple rules and can be extended to use external APIs for deeper analysis.
+        """
+        if not feedback_list:
+            return "No feedback available to analyze."
+
+        # Example: Use simple rules, but can be replaced with API calls for NLP/sentiment/topic extraction
+        positives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'positive']
+        negatives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'negative']
+        advice_parts = []
+        if negatives:
+            advice_parts.append("Address these common complaints: " + "; ".join(negatives[:2]))
+        if positives:
+            advice_parts.append("Leverage these strengths: " + "; ".join(positives[:2]))
+        if not advice_parts:
+            advice_parts.append("Monitor feedback for actionable insights.")
+        return "\n".join(advice_parts)
     """Agent for tracking competitors and analyzing market positioning"""
     
     def __init__(self, coordinator):
@@ -104,6 +123,16 @@ class CompetitorTrackingAgent:
         """Handle messages from other agents"""
         if message.message_type == 'analyze_competitors':
             return self.analyze_competitors(message.data['product_info'], message.data.get('market_data'))
+        if message.message_type == 'fetch_feedback':
+            # Expected data: {'competitor': str, 'category': str, 'limit': int}
+            comp = message.data.get('competitor')
+            cat = message.data.get('category')
+            limit = message.data.get('limit', 5)
+            return self.fetch_recent_feedback(comp, cat, limit=limit)
+        if message.message_type == 'analyze_feedback_and_advise':
+            # Expected data: {'feedback_list': list}
+            feedback_list = message.data.get('feedback_list', [])
+            return self.analyze_feedback_and_advise(feedback_list)
         return None
     
     def discover_intelligent_competitors(self, product_name: str, category: str, price_range: str = None) -> Dict[str, Any]:
@@ -147,7 +176,46 @@ class CompetitorTrackingAgent:
         """Fallback competitor discovery using basic category mapping"""
         
         fallback_competitors = self.fallback_competitors.get(category.lower(), self.fallback_competitors['smartphones'])
-        
+        # Provide a richer competitive_landscape for common categories so the UI has meaningful lists
+        landscape_map = {
+            'smartphones': {
+                'premium_brands': ['Apple', 'Google'],
+                'value_brands': ['Xiaomi', 'OnePlus', 'Huawei'],
+                'innovation_leaders': ['Google', 'Apple']
+            },
+            'tablets': {
+                'premium_brands': ['Apple', 'Microsoft'],
+                'value_brands': ['Lenovo', 'Amazon'],
+                'innovation_leaders': ['Apple', 'Microsoft']
+            },
+            'laptops': {
+                'premium_brands': ['Apple', 'Dell'],
+                'value_brands': ['HP', 'ASUS', 'Lenovo'],
+                'innovation_leaders': ['Apple', 'Dell']
+            },
+            'wearables': {
+                'premium_brands': ['Apple', 'Garmin'],
+                'value_brands': ['Amazfit', 'Fitbit'],
+                'innovation_leaders': ['Apple', 'Garmin']
+            },
+            'tv': {
+                'premium_brands': ['LG', 'Sony'],
+                'value_brands': ['TCL', 'Hisense'],
+                'innovation_leaders': ['LG', 'Sony']
+            },
+            'appliances': {
+                'premium_brands': ['Bosch', 'Miele'],
+                'value_brands': ['Whirlpool', 'GE'],
+                'innovation_leaders': ['Bosch', 'Whirlpool']
+            }
+        }
+
+        default_landscape = landscape_map.get(category.lower(), {
+            'premium_brands': ['Apple'],
+            'value_brands': ['Xiaomi'],
+            'innovation_leaders': ['Google', 'Apple']
+        })
+
         return {
             'product_name': product_name,
             'category': category,
@@ -165,11 +233,7 @@ class CompetitorTrackingAgent:
                     'market_fragmentation': 'Medium',
                     'category': category
                 },
-                'competitive_landscape': {
-                    'premium_brands': ['Apple'] if 'Apple' in fallback_competitors else [],
-                    'value_brands': ['Xiaomi'] if 'Xiaomi' in fallback_competitors else [],
-                    'innovation_leaders': ['Google', 'Apple']
-                },
+                'competitive_landscape': default_landscape,
                 'strategic_recommendations': [
                     "Using fallback competitor mapping - consider enabling APIs for better discovery",
                     f"Focus on differentiation in {category} market",
@@ -177,6 +241,7 @@ class CompetitorTrackingAgent:
                 ]
             }
         }
+
     
     def get_competitor_pricing(self, category: str, product_price: float, discovered_competitors: List[str] = None) -> Dict[str, Any]:
         """Analyze competitor pricing for the product category using discovered competitors"""
@@ -291,6 +356,123 @@ class CompetitorTrackingAgent:
         """Analyze social media sentiment about competitors"""
         sentiment_data = {}
         
+        if not competitors:
+            return sentiment_data  # Return empty dict for empty competitor list
+            
+        print(f"📊 Analyzing sentiment for {len(competitors)} competitors")
+        
+        for competitor in competitors:
+            if self.use_real_data and self.real_data_connector:
+                # Try to get real sentiment data
+                try:
+                    real_sentiment = self._get_real_competitor_sentiment(competitor, category)
+                    if real_sentiment:
+                        sentiment_data[competitor] = real_sentiment
+                        continue
+                except Exception as e:
+                    logging.warning(f"Failed to get real sentiment for {competitor}: {e}")
+            
+            # Fall back to simulated data if real data failed or not available
+            sim = self._generate_simulated_sentiment(competitor, category)
+            sentiment_data[competitor] = self._normalize_sentiment_output(sim)
+            
+            print(f"✅ Generated sentiment data for {competitor}")
+        
+        return sentiment_data
+
+    def fetch_recent_feedback(self, competitor: str, category: str = 'smartphones', limit: int = 5) -> List[Dict[str, Any]]:
+        """Fetch recent feedback for a competitor using enabled APIs (Twitter -> YouTube -> News) with fallbacks.
+
+        Returns a list of feedback dicts with keys: comment, sentiment, platform, engagement, date, source
+        """
+        feedbacks = []
+        # Try Twitter API v2 if enabled
+        try:
+            from utils.api_manager import get_api_key, is_api_enabled
+            if is_api_enabled('twitter'):
+                token = get_api_key('twitter')
+                url = 'https://api.twitter.com/2/tweets/search/recent'
+                headers = {'Authorization': f'Bearer {token}'}
+                params = {'query': f'"{competitor}" -is:retweet lang:en', 'max_results': min(10, limit)}
+                r = requests.get(url, headers=headers, params=params, timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    for t in data.get('data', [])[:limit]:
+                        feedbacks.append({
+                            'comment': t.get('text', ''),
+                            'sentiment': 'neutral',
+                            'platform': 'Twitter',
+                            'engagement': 0,
+                            'date': datetime.now().isoformat(),
+                            'source': 'Twitter API'
+                        })
+                    if feedbacks:
+                        return feedbacks
+        except Exception:
+            pass
+
+        # Try YouTube (search comments on videos matching competitor)
+        try:
+            if is_api_enabled('youtube'):
+                ykey = get_api_key('youtube')
+                search_url = 'https://www.googleapis.com/youtube/v3/search'
+                sparams = {'part': 'snippet', 'q': competitor, 'type': 'video', 'maxResults': 5, 'key': ykey}
+                sr = requests.get(search_url, params=sparams, timeout=10)
+                if sr.status_code == 200:
+                    sdata = sr.json()
+                    vids = [item['id']['videoId'] for item in sdata.get('items', []) if 'id' in item and 'videoId' in item['id']]
+                    # For each video, try to get top comments
+                    for vid in vids[:3]:
+                        curl = 'https://www.googleapis.com/youtube/v3/commentThreads'
+                        cparams = {'part': 'snippet', 'videoId': vid, 'maxResults': 5, 'key': ykey}
+                        cr = requests.get(curl, params=cparams, timeout=10)
+                        if cr.status_code == 200:
+                            cdata = cr.json()
+                            for it in cdata.get('items', [])[:limit]:
+                                top = it['snippet']['topLevelComment']['snippet']
+                                feedbacks.append({
+                                    'comment': top.get('textDisplay', ''),
+                                    'sentiment': 'neutral',
+                                    'platform': 'YouTube',
+                                    'engagement': top.get('likeCount', 0),
+                                    'date': top.get('publishedAt', datetime.now().isoformat()),
+                                    'source': 'YouTube API'
+                                })
+                    if feedbacks:
+                        return feedbacks[:limit]
+        except Exception:
+            pass
+
+        # Try News API headlines
+        try:
+            if is_api_enabled('news_api'):
+                nkey = get_api_key('news_api')
+                url = 'https://newsapi.org/v2/everything'
+                params = {'q': competitor, 'language': 'en', 'pageSize': limit, 'apiKey': nkey}
+                nr = requests.get(url, params=params, timeout=10)
+                if nr.status_code == 200:
+                    ndata = nr.json()
+                    for art in ndata.get('articles', [])[:limit]:
+                        feedbacks.append({
+                            'comment': art.get('title') or art.get('description') or '',
+                            'sentiment': 'neutral',
+                            'platform': 'News',
+                            'engagement': 0,
+                            'date': art.get('publishedAt', datetime.now().isoformat()),
+                            'source': 'News API'
+                        })
+                    if feedbacks:
+                        return feedbacks
+        except Exception:
+            pass
+
+        # Fallback to simulated sample feedback
+        try:
+            sim = self._generate_simulated_sentiment(competitor, category)
+            return sim.get('sample_feedback', [])[:limit]
+        except Exception:
+            return []
+        
         for competitor in competitors:
             if self.use_real_data and self.real_data_connector:
                 # Try to get real sentiment data
@@ -303,9 +485,60 @@ class CompetitorTrackingAgent:
                     logging.warning(f"Failed to get real sentiment for {competitor}: {e}")
             
             # Fall back to simulated data
-            sentiment_data[competitor] = self._generate_simulated_sentiment(competitor, category)
+            sim = self._generate_simulated_sentiment(competitor, category)
+            sentiment_data[competitor] = self._normalize_sentiment_output(sim)
         
         return sentiment_data
+
+    def _normalize_sentiment_output(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure sentiment output uses numeric fields and has sample feedback"""
+        if not data:
+            return {
+                'sentiment_scores': {'positive': 0.0, 'negative': 0.0, 'neutral': 1.0},
+                'overall_score': 0.0,
+                'total_mentions': 0,
+                'trending_topics': [],
+                'sample_feedback': [],
+                'data_source': 'Unavailable'
+            }
+
+        # Ensure numeric floats
+        ss = data.get('sentiment_scores', {})
+        try:
+            positive = float(ss.get('positive', 0.0))
+        except Exception:
+            positive = 0.0
+        try:
+            negative = float(ss.get('negative', 0.0))
+        except Exception:
+            negative = 0.0
+        neutral = max(0.0, 1.0 - positive - negative)
+
+        overall = data.get('overall_score', positive - negative)
+        try:
+            overall = float(overall)
+        except Exception:
+            overall = positive - negative
+
+        total_mentions = data.get('total_mentions', 0) or 0
+        try:
+            total_mentions = int(total_mentions)
+        except Exception:
+            total_mentions = 0
+
+        feedback = data.get('sample_feedback', []) or []
+        # Ensure at least 3 feedback items for UI
+        if not feedback:
+            feedback = self._generate_sample_feedback(data.get('brand', 'Competitor'), max(0.4, positive))
+
+        return {
+            'sentiment_scores': {'positive': round(positive, 3), 'negative': round(negative, 3), 'neutral': round(neutral, 3)},
+            'overall_score': round(overall, 3),
+            'total_mentions': total_mentions,
+            'trending_topics': data.get('trending_topics', []),
+            'sample_feedback': feedback,
+            'data_source': data.get('data_source', 'Simulated')
+        }
     
     def _get_real_competitor_sentiment(self, competitor: str, category: str) -> Dict[str, Any]:
         """Get real sentiment data for competitor"""
@@ -320,7 +553,7 @@ class CompetitorTrackingAgent:
                 # Use the processed sentiment data from the real_data_connector
                 sentiment_dist = news_sentiment.get('sentiment_distribution', {})
                 if isinstance(sentiment_dist, dict) and 'positive' in sentiment_dist:
-                    return {
+                    base = {
                         'sentiment_scores': {
                             'positive': round(sentiment_dist['positive'] / 100, 3),
                             'negative': round(sentiment_dist['negative'] / 100, 3),
@@ -341,10 +574,19 @@ class CompetitorTrackingAgent:
                         ],
                         'data_source': 'Real News API'
                     }
+                    # Add recommendations based on news sentiment
+                    recs = []
+                    avg = news_sentiment.get('average_sentiment', 0)
+                    if avg > 0.2:
+                        recs.append('Promote positive press excerpts in campaigns')
+                    elif avg < -0.2:
+                        recs.append('Address negative press through targeted PR')
+                    base['recommendations'] = recs
+                    return base
                 else:
                     # Fallback if sentiment_distribution structure is different
                     avg_sentiment = news_sentiment.get('average_sentiment', 0)
-                    return {
+                    base = {
                         'sentiment_scores': {
                             'positive': max(0, avg_sentiment),
                             'negative': max(0, -avg_sentiment),
@@ -365,6 +607,8 @@ class CompetitorTrackingAgent:
                         ],
                         'data_source': 'Real News API'
                     }
+                    base['recommendations'] = ['Monitor news sentiment closely']
+                    return base
         except Exception as e:
             logging.error(f"Error getting real sentiment for {competitor}: {e}")
         
@@ -472,122 +716,76 @@ class CompetitorTrackingAgent:
         topics = generic_topics.get(category.lower(), generic_topics['smartphones'])
         return np.random.choice(topics, size=3, replace=False).tolist()
     
-    def generate_recommendations(self, pricing_analysis: Dict[str, Any], 
-                               sentiment_analysis: Dict[str, Any],
-                               product_info: Dict[str, Any],
-                               discovery_results: Dict[str, Any] = None) -> List[str]:
-        """Generate competitive recommendations with intelligent discovery insights"""
-        recommendations = []
-        
-        # Pricing recommendations
-        position = pricing_analysis['competitive_position']
-        if position['percentile'] > 75:
-            recommendations.append("Your product is priced in the premium segment. Ensure feature differentiation justifies the premium.")
-        elif position['percentile'] < 25:
-            recommendations.append("Your product is in the budget segment. Consider cost optimization or feature enhancement.")
-        
-        # Price gap opportunities
-        gaps = pricing_analysis['price_gaps']
-        if gaps['opportunities'] > 0:
-            recommendations.append(f"Found {gaps['opportunities']} pricing opportunities. Consider variant pricing strategy.")
-        
-        # Sentiment-based recommendations
-        if sentiment_analysis:
-            competitor_sentiments = [(comp, data['overall_score']) for comp, data in sentiment_analysis.items()]
-            if competitor_sentiments:
-                best_competitor = max(competitor_sentiments, key=lambda x: x[1])
-                worst_competitor = min(competitor_sentiments, key=lambda x: x[1])
-                
-                recommendations.append(f"Learn from {best_competitor[0]}'s positive sentiment (score: {best_competitor[1]:.2f})")
-                recommendations.append(f"Avoid {worst_competitor[0]}'s negative patterns (score: {worst_competitor[1]:.2f})")
-                
-                # Feature recommendations based on trending topics
-                all_trending = []
-                for comp_data in sentiment_analysis.values():
-                    all_trending.extend(comp_data['trending_topics'])
-                
-                if all_trending:
-                    most_discussed = max(set(all_trending), key=all_trending.count)
-                    recommendations.append(f"Focus on '{most_discussed}' - most discussed feature across competitors")
-        
-        # Discovery-based recommendations
-        if discovery_results:
-            market_insights = discovery_results.get('market_insights', {})
-            
-            # Add strategic recommendations from discovery
-            strategic_recs = market_insights.get('strategic_recommendations', [])
-            recommendations.extend(strategic_recs)
-            
-            # Competitive landscape insights
-            landscape = market_insights.get('competitive_landscape', {})
-            premium_brands = landscape.get('premium_brands', [])
-            value_brands = landscape.get('value_brands', [])
-            
-            if len(premium_brands) > 2:
-                recommendations.append(f"Premium-heavy market with {len(premium_brands)} premium competitors - consider value positioning")
-            
-            if len(value_brands) > 2:
-                recommendations.append(f"Value-competitive market with {len(value_brands)} budget competitors - premium differentiation may be effective")
-            
-            # Discovery method insights
-            discovery_method = discovery_results.get('discovery_timestamp')
-            if discovery_method:
-                direct_count = len(discovery_results.get('direct_competitors', []))
-                if direct_count > 5:
-                    recommendations.append("Highly competitive market detected - focus on unique value proposition and differentiation")
-                elif direct_count < 3:
-                    recommendations.append("Less crowded market opportunity - consider aggressive market penetration strategy")
-        
-        # Market positioning recommendations
-        avg_competitor_price = pricing_analysis['price_statistics']['avg_price']
-        our_price = pricing_analysis['price_statistics']['our_price']
-        
-        if our_price < avg_competitor_price * 0.9:
-            recommendations.append("Consider positioning as 'premium value' rather than budget option")
-        elif our_price > avg_competitor_price * 1.1:
-            recommendations.append("Justify premium pricing with unique features and superior quality")
-        
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_recommendations = []
-        for rec in recommendations:
-            if rec not in seen:
-                unique_recommendations.append(rec)
-                seen.add(rec)
-        
-        return unique_recommendations
+
     
     def create_visualizations(self, pricing_analysis: Dict[str, Any], 
-                            sentiment_analysis: Dict[str, Any]) -> Dict[str, Any]:
+                            sentiment_analysis: Dict[str, Any] = None) -> Dict[str, Any]:
         """Create visualization data for Streamlit"""
+        visualizations = {}
         
-        # Price comparison chart
-        competitors = list(pricing_analysis['competitor_prices'].keys())
-        prices = [pricing_analysis['competitor_prices'][comp]['price'] for comp in competitors]
-        prices.append(pricing_analysis['price_statistics']['our_price'])
-        competitors.append('Our Product')
+        # Price comparison chart (if pricing data exists)
+        if pricing_analysis and 'competitor_prices' in pricing_analysis:
+            competitors = list(pricing_analysis['competitor_prices'].keys())
+            prices = [pricing_analysis['competitor_prices'][comp]['price'] for comp in competitors]
+            if 'price_statistics' in pricing_analysis and 'our_price' in pricing_analysis['price_statistics']:
+                prices.append(pricing_analysis['price_statistics']['our_price'])
+                competitors.append('Our Product')
+                
+            price_chart = {
+                'competitors': competitors,
+                'prices': prices,
+                'colors': ['blue'] * (len(competitors) - 1) + ['red'],  # Highlight our product
+                'type': 'price_comparison'
+            }
+            visualizations['price_comparison'] = price_chart
+            
+            # Market share visualization
+            try:
+                market_shares = [pricing_analysis['competitor_prices'][comp]['market_share'] for comp in competitors[:-1]]
+                samsung_share = max(0.0, 1.0 - sum(market_shares))  # Ensure non-negative
+                market_shares.append(samsung_share)
+                
+                market_share_chart = {
+                    'competitors': competitors,
+                    'market_shares': market_shares,
+                    'type': 'market_share'
+                }
+                visualizations['market_share'] = market_share_chart
+            except Exception as e:
+                print(f"Warning: Could not create market share chart: {e}")
         
-        price_chart = {
-            'competitors': competitors,
-            'prices': prices,
-            'colors': ['blue'] * (len(competitors) - 1) + ['red'],  # Highlight our product
-            'type': 'price_comparison'
+        # Sentiment comparison chart (if sentiment data exists)
+        if sentiment_analysis:
+            try:
+                sentiment_competitors = list(sentiment_analysis.keys())
+                if sentiment_competitors:  # Only create chart if we have competitors
+                    sentiment_scores = []
+                    positive_scores = []
+                    negative_scores = []
+                    
+                    for comp in sentiment_competitors:
+                        comp_data = sentiment_analysis[comp]
+                        sentiment_scores.append(comp_data.get('overall_score', 0))
+                        scores = comp_data.get('sentiment_scores', {})
+                        positive_scores.append(scores.get('positive', 0))
+                        negative_scores.append(scores.get('negative', 0))
+                    
+                    sentiment_chart = {
+                        'competitors': sentiment_competitors,
+                        'sentiment_scores': sentiment_scores,
+                        'positive_scores': positive_scores,
+                        'negative_scores': negative_scores,
+                        'type': 'sentiment_comparison'
+                    }
+                    visualizations['sentiment_analysis'] = sentiment_chart
+            except Exception as e:
+                print(f"Warning: Could not create sentiment chart: {e}")
+        
+        # Ensure we return something even if visualization creation fails
+        return visualizations or {
+            'error': 'No visualizations could be generated',
+            'reason': 'Missing or invalid input data'
         }
-        
-        # Sentiment comparison chart
-        sentiment_competitors = list(sentiment_analysis.keys())
-        sentiment_scores = [sentiment_analysis[comp]['overall_score'] for comp in sentiment_competitors]
-        
-        sentiment_chart = {
-            'competitors': sentiment_competitors,
-            'sentiment_scores': sentiment_scores,
-            'positive_scores': [sentiment_analysis[comp]['sentiment_scores']['positive'] for comp in sentiment_competitors],
-            'negative_scores': [sentiment_analysis[comp]['sentiment_scores']['negative'] for comp in sentiment_competitors],
-            'type': 'sentiment_comparison'
-        }
-        
-        # Market share visualization
-        market_shares = [pricing_analysis['competitor_prices'][comp]['market_share'] for comp in competitors[:-1]]
         samsung_share = 1 - sum(market_shares)  # Remaining market share
         market_shares.append(samsung_share)
         
@@ -645,11 +843,7 @@ class CompetitorTrackingAgent:
                 competitors=all_discovered_competitors[:5]  # Top 5 for sentiment analysis
             )
             
-            # Step 4: Generate Strategic Recommendations
-            print("\n💡 Step 4: Generating Strategic Recommendations")
-            recommendations = self.generate_recommendations(
-                pricing_analysis, sentiment_analysis, product_info, discovery_results
-            )
+            # Step 4: (Removed recommendations logic)
             
             # Step 5: Create Visualizations
             print("\n📊 Step 5: Creating Visualizations")
@@ -661,7 +855,7 @@ class CompetitorTrackingAgent:
                 'competitor_discovery': discovery_results,
                 'pricing_analysis': pricing_analysis,
                 'sentiment_analysis': sentiment_analysis,
-                'recommendations': recommendations,
+
                 'visualizations': visualizations,
                 
                 # Metadata

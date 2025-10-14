@@ -91,6 +91,14 @@ def display_main_header():
     """Display main application header"""
     st.markdown('<h1 class="main-header">📱 Samsung Product Launch Planner</h1>', unsafe_allow_html=True)
     st.markdown("---")
+    # Temporary debug: show shared coordinator data when requested
+    if 'coordinator' in st.session_state:
+        if st.checkbox('Show debug: coordinator shared data'):
+            try:
+                shared = st.session_state.coordinator.get_shared_data()
+                st.json(shared)
+            except Exception as e:
+                st.write('Error reading shared data:', e)
     st.markdown("""
     **Intelligent Product Launch Planning System**
     
@@ -690,28 +698,7 @@ def display_competitor_analysis(analysis_results):
                 st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            # Sentiment analysis chart
-            if 'sentiment_analysis' in viz_data:
-                sentiment_chart = viz_data['sentiment_analysis']
-                
-                fig = go.Figure(data=[
-                    go.Bar(
-                        x=sentiment_chart['competitors'],
-                        y=sentiment_chart['sentiment_scores'],
-                        marker_color='lightblue',
-                        text=[f"{s:.2f}" for s in sentiment_chart['sentiment_scores']],
-                        textposition='auto'
-                    )
-                ])
-                
-                fig.update_layout(
-                    title="📱 Competitor Sentiment Analysis",
-                    xaxis_title="Competitor",
-                    yaxis_title="Net Sentiment Score",
-                    height=400
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
+            pass  # Empty column
     
     # Market Insights
     discovery = competitor_data.get('competitor_discovery', {})
@@ -759,61 +746,80 @@ def display_competitor_analysis(analysis_results):
         if selected_competitor:
             comp_data = sentiment_analysis[selected_competitor]
             
-            col1, col2, col3, col4 = st.columns(4)
+            # Try to determine product category for fetching feedback
+            product_category = 'smartphones'
+            try:
+                if 'product_info' in st.session_state and st.session_state.product_info:
+                    # ProductInfo dataclass or dict
+                    pi = st.session_state.product_info
+                    product_category = getattr(pi, 'category', None) or pi.get('category', product_category) if isinstance(pi, dict) or hasattr(pi, '__dict__') else product_category
+            except Exception:
+                product_category = product_category
             
-            with col1:
-                st.metric(
-                    "Positive Sentiment",
-                    f"{comp_data['sentiment_scores']['positive'] * 100:.1f}%"
-                )
-            
-            with col2:
-                st.metric(
-                    "Negative Sentiment",
-                    f"{comp_data['sentiment_scores']['negative'] * 100:.1f}%"
-                )
-            
-            with col3:
-                st.metric(
-                    "Total Mentions",
-                    f"{comp_data['total_mentions']:,}"
-                )
-            
-            with col4:
-                data_source = comp_data.get('data_source', 'Unknown')
-                source_icon = '🌐' if 'Real' in data_source else '🤖'
-                st.metric(
-                    "Data Source",
-                    f"{source_icon} {data_source}"
-                )
-            
-            # Trending topics
+            # Trending topics - visual divider between competitor selection and feedback
             trending = comp_data.get('trending_topics', [])
             if trending:
-                st.markdown(f"**🔥 Trending Topics:** {', '.join(trending)}")
+                st.markdown("---")
+                st.markdown(f"**🔥 Top Trends for {selected_competitor}:** {', '.join(trending)}")
+            
+            # Attempt to fetch fresh recent feedback for the selected competitor (cached per competitor)
+            feedback_cache_key = f"feedback_{selected_competitor}"
+            feedback = None
+            if feedback_cache_key in st.session_state:
+                feedback = st.session_state[feedback_cache_key]
+            else:
+                try:
+                    coord = st.session_state.get('coordinator')
+                    if coord:
+                        fetched = coord.send_message('ui', 'competitor_tracker', 'fetch_feedback', {
+                            'competitor': selected_competitor,
+                            'category': product_category,
+                            'limit': 5
+                        })
+                        # Some send_message flows return the list directly
+                        if isinstance(fetched, list):
+                            feedback = fetched
+                        elif isinstance(fetched, dict) and 'sample_feedback' in fetched:
+                            feedback = fetched.get('sample_feedback', [])
+                        else:
+                            feedback = comp_data.get('sample_feedback', [])
+                    else:
+                        feedback = comp_data.get('sample_feedback', [])
+                except Exception as e:
+                    feedback = comp_data.get('sample_feedback', [])
+                # Cache result
+                st.session_state[feedback_cache_key] = feedback or []
             
             # Sample feedback
             st.markdown("#### 💬 Recent Feedback")
-            feedback = comp_data.get('sample_feedback', [])
-            for fb in feedback[:3]:  # Show top 3
+            for fb in (feedback or [])[:5]:  # Show up to 5
                 sentiment_color = {
                     'positive': '🟢',
                     'negative': '🔴',
                     'neutral': '🟡'
-                }.get(fb['sentiment'], '⚪')
-                
-                st.markdown(f"""
-                {sentiment_color} **{fb['platform']}** ({fb['engagement']} engagements)
-                
-                "{fb['comment']}"
-                """)
+                }.get(fb.get('sentiment', 'neutral'), '⚪')
+                platform = fb.get('platform', 'Unknown')
+                engagement = fb.get('engagement', 0)
+                comment = fb.get('comment', '')
+                st.markdown(f"{sentiment_color} **{platform}** ({engagement} engagements)\n\n\"{comment}\"")
+
+            # New Advice section based on feedback
+            st.markdown("#### 📝 Advice to Improve Our Product")
+            advice = "- No feedback available to analyze."
+            try:
+                coord = st.session_state.get('coordinator')
+                if coord and feedback:
+                    advice_result = coord.send_message('ui', 'competitor_tracker', 'analyze_feedback_and_advise', {
+                        'feedback_list': feedback
+                    })
+                    if advice_result:
+                        advice = advice_result
+            except Exception as e:
+                advice = f"- Unable to analyze feedback: {e}"
+            st.markdown(advice)
     
     # Recommendations
-    recommendations = competitor_data.get('recommendations', [])
-    if recommendations:
-        st.markdown("### 💡 Competitive Recommendations")
-        for i, rec in enumerate(recommendations, 1):
-            st.markdown(f'<div class="recommendation-box">{i}. {rec}</div>', unsafe_allow_html=True)
+
 
 def display_customer_segmentation(analysis_results):
     """Display customer segmentation results"""
