@@ -496,6 +496,134 @@ class RealDataConnector:
             sources.append('News API')
         
         return sources if sources else ['Simulated Data']
+    
+    def get_youtube_metrics(self, query: str) -> Dict[str, Any]:
+        """Get YouTube videos for Samsung product discovery"""
+        if not is_api_enabled('youtube'):
+            print("⚠️ YouTube API not enabled")
+            return {}
+        
+        # Check cache first
+        cache_key = f"youtube_{query}"
+        if self._is_cached(cache_key):
+            print(f"📺 Using cached YouTube data for {query}")
+            return self.cache[cache_key]['data']
+        
+        try:
+            api_key = get_api_key('youtube')
+            if not api_key:
+                print("⚠️ YouTube API key not found")
+                return {}
+            
+            # YouTube Data API v3 - Search for videos
+            url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                'part': 'snippet',
+                'q': query,
+                'key': api_key,
+                'type': 'video',
+                'maxResults': 10,
+                'order': 'relevance',
+                'publishedAfter': '2020-01-01T00:00:00Z',  # Only recent videos
+                'regionCode': 'US',
+                'relevanceLanguage': 'en'
+            }
+            
+            print(f"🔍 Calling YouTube API for: {query}")
+            response = requests.get(url, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                videos = []
+                if 'items' in data:
+                    for item in data['items']:
+                        video_data = {
+                            'title': item['snippet']['title'],
+                            'description': item['snippet']['description'],
+                            'channel': item['snippet']['channelTitle'],
+                            'published_at': item['snippet']['publishedAt'],
+                            'video_id': item['id']['videoId'],
+                            'url': f"https://www.youtube.com/watch?v={item['id']['videoId']}"
+                        }
+                        videos.append(video_data)
+                
+                result = {
+                    'videos': videos,
+                    'total_results': len(videos),
+                    'query': query,
+                    'success': True
+                }
+                
+                # Cache the result
+                self._cache_data(cache_key, result)
+                print(f"✅ Found {len(videos)} YouTube videos for {query}")
+                return result
+            else:
+                print(f"❌ YouTube API error: {response.status_code} - {response.text}")
+                return {}
+                
+        except Exception as e:
+            print(f"❌ Error calling YouTube API: {e}")
+            return {}
+    
+    def get_news_data(self, query: str, sources: str = None, language: str = 'en', 
+                     sort_by: str = 'relevancy', page_size: int = 20) -> Dict[str, Any]:
+        """Get news articles for Samsung product discovery"""
+        if not is_api_enabled('news_api'):
+            print("⚠️ News API not enabled")
+            return {}
+        
+        # Check cache first
+        cache_key = f"news_{query}_{sources}_{sort_by}"
+        if self._is_cached(cache_key):
+            print(f"📰 Using cached news data for {query}")
+            return self.cache[cache_key]['data']
+        
+        try:
+            api_key = get_api_key('news_api')
+            if not api_key:
+                print("⚠️ News API key not found")
+                return {}
+            
+            # News API - Everything endpoint for comprehensive search
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                'q': query,
+                'apiKey': api_key,
+                'language': language,
+                'sortBy': sort_by,
+                'pageSize': page_size,
+                'from': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'),  # Last year
+            }
+            
+            if sources:
+                params['sources'] = sources
+            
+            print(f"🔍 Calling News API for: {query}")
+            response = requests.get(url, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                result = {
+                    'articles': data.get('articles', []),
+                    'total_results': data.get('totalResults', 0),
+                    'query': query,
+                    'success': True
+                }
+                
+                # Cache the result
+                self._cache_data(cache_key, result)
+                print(f"✅ Found {len(data.get('articles', []))} news articles for {query}")
+                return result
+            else:
+                print(f"❌ News API error: {response.status_code} - {response.text}")
+                return {}
+                
+        except Exception as e:
+            print(f"❌ Error calling News API: {e}")
+            return {}
 
 # Global instance
 real_data_connector = RealDataConnector()

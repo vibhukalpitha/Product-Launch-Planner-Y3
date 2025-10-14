@@ -216,6 +216,180 @@ def display_market_analysis(analysis_results):
         st.error(f"Market analysis failed: {market_data['error']}")
         return
     
+    # 🆕 SAMSUNG SIMILAR PRODUCTS SECTION (FIRST!)
+    samsung_products = market_data.get('samsung_similar_products', {})
+    
+    if samsung_products and samsung_products.get('found_products'):
+        st.markdown("---")
+        st.markdown('<h3 style="color: #1f77b4;">📱 Samsung\'s Past Similar Products</h3>', unsafe_allow_html=True)
+        
+        # Discovery summary
+        col1, col2, col3 = st.columns(3)
+        
+        found_products = samsung_products['found_products']
+        data_sources = samsung_products.get('data_sources', [])
+        
+        with col1:
+            st.metric(
+                "Similar Products Found", 
+                len(found_products),
+                delta=f"Using {samsung_products.get('discovery_method', 'Unknown')} method"
+            )
+        
+        with col2:
+            price_comparison = samsung_products.get('price_comparison', {})
+            if price_comparison:
+                position = price_comparison.get('price_position', 'Unknown')
+                percentile = price_comparison.get('price_percentile', 50)
+                st.metric(
+                    "Price Position",
+                    position,
+                    delta=f"{percentile:.1f}th percentile vs Samsung"
+                )
+        
+        with col3:
+            evolution = samsung_products.get('category_evolution', {})
+            if evolution:
+                st.metric(
+                    "Innovation Pace",
+                    evolution.get('innovation_pace', 'Unknown'),
+                    delta=f"{evolution.get('total_products_analyzed', 0)} products analyzed"
+                )
+        
+        # Samsung Products Table
+        st.subheader("🏆 Top Samsung Similar Products")
+        
+        # Create a detailed table
+        product_data = []
+        for i, product in enumerate(found_products[:8], 1):  # Top 8 products
+            product_data.append({
+                "Rank": i,
+                "Product Name": product['name'],
+                "Price": f"${product['estimated_price']:,}",
+                "Launch Year": product['launch_year'],
+                "Similarity": f"{product['similarity_score']:.2f}",
+                "Tier": product.get('tier', 'N/A'),
+                "Source": product['source']
+            })
+        
+        df = pd.DataFrame(product_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        # Product Timeline Visualization
+        if samsung_products.get('product_timeline'):
+            st.subheader("📅 Samsung Product Timeline")
+            
+            timeline_data = samsung_products['product_timeline']
+            
+            fig_timeline = go.Figure()
+            
+            # Create timeline scatter plot
+            x_years = [p['year'] for p in timeline_data]
+            y_prices = [p['price'] for p in timeline_data]
+            names = [p['name'] for p in timeline_data]
+            similarities = [p['similarity'] for p in timeline_data]
+            
+            fig_timeline.add_trace(go.Scatter(
+                x=x_years,
+                y=y_prices,
+                mode='markers+text',
+                marker=dict(
+                    size=[s*20 for s in similarities],  # Size based on similarity
+                    color=similarities,
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(title="Similarity Score")
+                ),
+                text=names,
+                textposition="top center",
+                name="Samsung Products",
+                hovertemplate="<b>%{text}</b><br>Year: %{x}<br>Price: $%{y:,}<br>Similarity: %{marker.color:.2f}<extra></extra>"
+            ))
+            
+            fig_timeline.update_layout(
+                title="Samsung Product Launch Timeline",
+                xaxis_title="Launch Year",
+                yaxis_title="Price ($)",
+                height=500,
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig_timeline, use_container_width=True)
+        
+        # Price Comparison Chart
+        if price_comparison and 'comparison_products' in price_comparison:
+            st.subheader("💰 Price Comparison with Samsung Portfolio")
+            
+            comparison_products = price_comparison['comparison_products']
+            target_price = price_comparison['target_price']
+            
+            fig_price = go.Figure()
+            
+            # Samsung products bars
+            product_names = [p['name'] for p in comparison_products]
+            product_prices = [p['price'] for p in comparison_products]
+            price_diffs = [p['price_diff'] for p in comparison_products]
+            
+            # Color based on price difference
+            colors = ['red' if diff > 0 else 'green' if diff < 0 else 'blue' for diff in price_diffs]
+            
+            fig_price.add_trace(go.Bar(
+                x=product_names,
+                y=product_prices,
+                name="Samsung Products",
+                marker_color=colors,
+                text=[f"${price:,}" for price in product_prices],
+                textposition='auto',
+                hovertemplate="<b>%{x}</b><br>Price: $%{y:,}<br>Difference: %{customdata}%<extra></extra>",
+                customdata=price_diffs
+            ))
+            
+            # Add target price line
+            fig_price.add_hline(
+                y=target_price, 
+                line_dash="dash", 
+                line_color="orange",
+                annotation_text=f"Your Product: ${target_price:,}"
+            )
+            
+            fig_price.update_layout(
+                title="Price Comparison: Your Product vs Samsung Similar Products",
+                xaxis_title="Samsung Products",
+                yaxis_title="Price ($)",
+                height=400,
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig_price, use_container_width=True)
+        
+        # Insights and Recommendations
+        st.subheader("💡 Samsung Portfolio Insights")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📊 Discovery Summary:**")
+            st.write(f"• **Data Sources:** {', '.join(data_sources)}")
+            st.write(f"• **Products Found:** {len(found_products)}")
+            
+            if price_comparison:
+                avg_samsung_price = price_comparison.get('similar_products_avg', 0)
+                st.write(f"• **Samsung Avg Price:** ${avg_samsung_price:,.2f}")
+                st.write(f"• **Your Position:** {price_comparison.get('price_position', 'Unknown')}")
+        
+        with col2:
+            st.markdown("**📈 Category Evolution:**")
+            if evolution:
+                st.write(f"• **Analysis Period:** {evolution.get('analysis_period', 'N/A')}")
+                st.write(f"• **Innovation Pace:** {evolution.get('innovation_pace', 'Unknown')}")
+                
+                if evolution.get('most_recent_year'):
+                    current_year = 2025
+                    years_since = current_year - evolution['most_recent_year']
+                    st.write(f"• **Latest Launch:** {years_since} year(s) ago")
+        
+        st.markdown("---")
+    
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
     
