@@ -1148,18 +1148,33 @@ def display_campaign_planning(analysis_results):
             
             with col1:
                 st.markdown("#### Budget & Spend")
+                monthly_cost = platform_data.get('monthly_ad_cost', 0)
+                months = platform_data.get('months', 1)
+                total_cost = platform_data.get('total_cost', 0)
+                daily_budget = total_cost / (months * 30) if months > 0 else 0
+                avg_cpc = 1.50  # Standard CPC from campaign planning agent
+                
                 st.markdown(f"""
-                - **Allocated Budget**: ${platform_data['allocated_budget']:,.2f}
-                - **Daily Budget**: ${platform_data['daily_budget']:,.2f}
-                - **Avg CPC**: ${platform_data['avg_cost_per_click']:.2f}
+                - **Total Budget**: ${total_cost:,.2f}
+                - **Monthly Cost**: ${monthly_cost:,.2f}
+                - **Daily Budget**: ${daily_budget:,.2f}
+                - **Avg CPC**: ${avg_cpc:.2f}
                 """)
             
             with col2:
                 st.markdown("#### Performance Metrics")
+                est_clicks = platform_data.get('estimated_clicks', 0)
+                est_reach = platform_data.get('estimated_reach', 0)
+                est_impressions = platform_data.get('estimated_impressions', 0)
+                est_engagement = platform_data.get('estimated_engagement', 0)
+                daily_clicks = est_clicks / (platform_data.get('months', 1) * 30) if platform_data.get('months', 1) > 0 else 0
+                
                 st.markdown(f"""
-                - **Estimated Clicks**: {platform_data['estimated_clicks']:,}
-                - **Estimated Reach**: {platform_data['estimated_reach']:,}
-                - **Daily Clicks**: {platform_data['daily_clicks']:,}
+                - **Estimated Clicks**: {est_clicks:,}
+                - **Estimated Reach**: {est_reach:,}
+                - **Estimated Impressions**: {est_impressions:,}
+                - **Estimated Engagement**: {est_engagement:,}
+                - **Daily Clicks**: {int(daily_clicks):,}
                 """)
             
             with col3:
@@ -1171,24 +1186,30 @@ def display_campaign_planning(analysis_results):
                 - **Est. Revenue**: ${roi_proj['estimated_revenue']:,.2f}
                 """)
     
-    # Campaign timeline
-    timeline = campaign_data.get('campaign_timeline', {})
-    if timeline:
-        st.markdown("### 📅 Campaign Timeline")
-        
-        phases = timeline.get('phases', [])
-        for phase in phases:
-            st.markdown(f"""
-            **{phase['phase']}** ({phase['duration']})
-            - {', '.join(phase['activities'])}
-            """)
-    
-    # Recommendations
-    recommendations = campaign_data.get('recommendations', [])
-    if recommendations:
-        st.markdown("### 💡 Campaign Recommendations")
-        for i, rec in enumerate(recommendations, 1):
-            st.markdown(f'<div class="recommendation-box">{i}. {rec}</div>', unsafe_allow_html=True)
+    # Fetch platform-specific timeline and recommendations
+    campaign_planner = st.session_state.get('campaign_planner')
+    if not campaign_planner:
+        campaign_planner = CampaignPlanningAgent(st.session_state.coordinator)
+        st.session_state['campaign_planner'] = campaign_planner
+    details = campaign_planner.get_platform_campaign_details(
+        selected_platform,
+        campaign_data.get('target_audience', {}).get('duration_days', 30)
+    )
+    platform_timeline = details['timeline']
+    platform_recommendations = details['recommendations']
+
+    # Show platform-specific timeline
+    st.markdown("### 📅 Campaign Timeline")
+    for phase in platform_timeline.get('phases', []):
+        st.markdown(f"""
+        **{phase['phase']}** ({phase['duration']})
+        - {', '.join(phase['activities'])}
+        """)
+
+    # Show platform-specific recommendations
+    st.markdown("### 💡 Campaign Recommendations")
+    for i, rec in enumerate(platform_recommendations, 1):
+        st.markdown(f'<div class="recommendation-box">{i}. {rec}</div>', unsafe_allow_html=True)
 
 def main():
     """Main application function"""

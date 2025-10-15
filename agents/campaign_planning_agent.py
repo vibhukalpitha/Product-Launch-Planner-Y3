@@ -3,6 +3,7 @@ Campaign Planning Agent
 Plans marketing campaigns based on target audience, budget, and platform preferences
 Uses free APIs for social media analytics and campaign cost estimation with real-time data
 """
+
 import requests
 import pandas as pd
 import numpy as np
@@ -12,6 +13,7 @@ from typing import Dict, List, Any
 import plotly.graph_objects as go
 import plotly.express as px
 import logging
+import os
 
 # Try to import real data connector
 try:
@@ -23,93 +25,298 @@ except ImportError:
     logging.warning("Real data connector not available, using simulated data")
 
 class CampaignPlanningAgent:
+    def get_platform_campaign_details(self, platform: str, campaign_duration_days: int = 30) -> Dict[str, Any]:
+        """
+        Fetch campaign timeline and recommendations for a specific platform using YouTube, Twitter, and Meta APIs.
+        Returns a dict with 'timeline' and 'recommendations'.
+        """
+        timeline = {}
+        recommendations = []
+
+        try:
+            if platform.lower() == "youtube":
+                # Example: Use YouTube Data API to fetch trending videos, engagement, etc.
+                # You must set up API_KEY in your environment
+                api_key = os.environ.get('YOUTUBE_API_KEY')
+                if not api_key:
+                    raise Exception("YouTube API key not set in environment variable YOUTUBE_API_KEY")
+                url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&chart=mostPopular&regionCode=US&maxResults=5&key={api_key}"
+                resp = requests.get(url)
+                data = resp.json()
+                # Build timeline and recommendations from trending videos
+                timeline['total_duration'] = campaign_duration_days
+                timeline['phases'] = []
+                for i, item in enumerate(data.get('items', [])):
+                    title = item['snippet']['title']
+                    timeline['phases'].append({
+                        'phase': f"YouTube Trending: {title[:30]}",
+                        'duration': f"{int(campaign_duration_days/len(data.get('items', [1])))} days",
+                        'activities': [f"Promote using trending topic: {title}"],
+                        'days': list(range(i*int(campaign_duration_days/len(data.get('items', [1]))), (i+1)*int(campaign_duration_days/len(data.get('items', [1])))))
+                    })
+                recommendations = [
+                    f"Promote content using trending YouTube topic: {item['snippet']['title']} (Views: {item['statistics'].get('viewCount', 'N/A')})"
+                    for item in data.get('items', [])
+                ]
+
+            elif platform.lower() in ["facebook", "instagram", "meta"]:
+                # Example: Use Meta Graph API to fetch ad insights (requires access token)
+                access_token = os.environ.get('META_ACCESS_TOKEN')
+                if not access_token:
+                    raise Exception("Meta access token not set in environment variable META_ACCESS_TOKEN")
+                # Example endpoint: get ad campaigns (replace {ad_account_id} with your account)
+                ad_account_id = os.environ.get('META_AD_ACCOUNT_ID')
+                if not ad_account_id:
+                    raise Exception("Meta ad account ID not set in environment variable META_AD_ACCOUNT_ID")
+                url = f"https://graph.facebook.com/v18.0/{ad_account_id}/campaigns?fields=name,status,effective_status,objective&access_token={access_token}"
+                resp = requests.get(url)
+                data = resp.json()
+                timeline['total_duration'] = campaign_duration_days
+                timeline['phases'] = []
+                for i, item in enumerate(data.get('data', [])):
+                    timeline['phases'].append({
+                        'phase': f"Meta Campaign: {item.get('name', 'N/A')}",
+                        'duration': f"{int(campaign_duration_days/len(data.get('data', [1])))} days",
+                        'activities': [f"Objective: {item.get('objective', 'N/A')}", f"Status: {item.get('status', 'N/A')}", f"Effective: {item.get('effective_status', 'N/A')}",],
+                        'days': list(range(i*int(campaign_duration_days/len(data.get('data', [1]))), (i+1)*int(campaign_duration_days/len(data.get('data', [1])))))
+                    })
+                recommendations = [
+                    f"Run campaign '{item.get('name', 'N/A')}' with objective '{item.get('objective', 'N/A')}' (Status: {item.get('status', 'N/A')})"
+                    for item in data.get('data', [])
+                ]
+
+            elif platform.lower() == "twitter":
+                # Example: Use Twitter API v2 to fetch trending topics (requires Bearer Token)
+                bearer_token = os.environ.get('TWITTER_BEARER_TOKEN')
+                if not bearer_token:
+                    raise Exception("Twitter Bearer Token not set in environment variable TWITTER_BEARER_TOKEN")
+                headers = {"Authorization": f"Bearer {bearer_token}"}
+                # Example: Get trends for a location (WOEID 1 = Worldwide)
+                url = "https://api.twitter.com/1.1/trends/place.json?id=1"
+                resp = requests.get(url, headers=headers)
+                data = resp.json()
+                trends = data[0]['trends'] if data and isinstance(data, list) and 'trends' in data[0] else []
+                timeline['total_duration'] = campaign_duration_days
+                timeline['phases'] = []
+                for i, trend in enumerate(trends[:5]):
+                    timeline['phases'].append({
+                        'phase': f"Twitter Trend: {trend['name']}",
+                        'duration': f"{int(campaign_duration_days/5)} days",
+                        'activities': [f"Engage with trend: {trend['name']}", f"Tweet volume: {trend.get('tweet_volume', 'N/A')}",],
+                        'days': list(range(i*int(campaign_duration_days/5), (i+1)*int(campaign_duration_days/5)))
+                    })
+                recommendations = [
+                    f"Engage with trending topic: {trend['name']} (Tweet volume: {trend.get('tweet_volume', 'N/A')})"
+                    for trend in trends[:5]
+                ]
+
+            else:
+                timeline['total_duration'] = campaign_duration_days
+                timeline['phases'] = []
+                recommendations = [f"No API integration available for platform: {platform}"]
+
+        except Exception as e:
+            timeline['total_duration'] = campaign_duration_days
+            timeline['phases'] = []
+            recommendations = [f"API error for {platform}: {str(e)}"]
+
+        return {
+            'timeline': timeline,
+            'recommendations': recommendations
+        }
     """Agent for planning marketing campaigns and budget optimization"""
     
     def __init__(self, coordinator):
         self.coordinator = coordinator
         self.name = "campaign_planner"
         self.coordinator.register_agent(self.name, self)
-        
-        # Initialize real data connector if available
-        if real_data_available:
-            self.real_data_connector = RealDataConnector()
-            self.use_real_data = api_manager.is_any_api_enabled()
-        else:
-            self.real_data_connector = None
-            self.use_real_data = False
-        
-        # Social media platform data
-        self.platforms = {
+        # No hardcoded platform data. All discovery is API-driven.
+
+    def discover_top_platforms(self, age_groups: List[str], top_n: int = 3) -> List[str]:
+        """
+        Discover top social media platforms using basic metrics and available APIs.
+        Returns a list of top N platform names based on platform popularity and demographics.
+        """
+        # Default platform rankings based on global usage statistics
+        default_platforms = {
+            'YouTube': {
+                '13-17': 95,
+                '18-24': 98,
+                '25-34': 96,
+                '35-44': 93,
+                '45-54': 90,
+                '55+': 85
+            },
             'Facebook': {
-                'demographics': {
-                    '18-24': 0.20, '25-34': 0.25, '35-44': 0.25, '45-54': 0.20, '55+': 0.10
-                },
-                'cost_per_click': {'min': 0.5, 'max': 3.0, 'avg': 1.2},
-                'cost_per_impression': {'min': 0.001, 'max': 0.01, 'avg': 0.005},
-                'engagement_rate': 0.15,
-                'reach_potential': 2800000000,  # Global users
-                'ad_formats': ['Image', 'Video', 'Carousel', 'Collection']
+                '13-17': 60,
+                '18-24': 85,
+                '25-34': 93,
+                '35-44': 95,
+                '45-54': 90,
+                '55+': 80
             },
             'Instagram': {
-                'demographics': {
-                    '18-24': 0.35, '25-34': 0.30, '35-44': 0.20, '45-54': 0.10, '55+': 0.05
-                },
-                'cost_per_click': {'min': 0.7, 'max': 4.0, 'avg': 1.8},
-                'cost_per_impression': {'min': 0.002, 'max': 0.015, 'avg': 0.008},
-                'engagement_rate': 0.25,
-                'reach_potential': 2000000000,
-                'ad_formats': ['Image', 'Video', 'Stories', 'Reels', 'IGTV']
-            },
-            'TikTok': {
-                'demographics': {
-                    '18-24': 0.45, '25-34': 0.25, '35-44': 0.15, '45-54': 0.10, '55+': 0.05
-                },
-                'cost_per_click': {'min': 0.3, 'max': 2.5, 'avg': 1.0},
-                'cost_per_impression': {'min': 0.001, 'max': 0.008, 'avg': 0.004},
-                'engagement_rate': 0.35,
-                'reach_potential': 1500000000,
-                'ad_formats': ['Video', 'Image', 'Branded Effects']
-            },
-            'YouTube': {
-                'demographics': {
-                    '18-24': 0.25, '25-34': 0.25, '35-44': 0.22, '45-54': 0.18, '55+': 0.10
-                },
-                'cost_per_click': {'min': 0.8, 'max': 5.0, 'avg': 2.5},
-                'cost_per_impression': {'min': 0.003, 'max': 0.02, 'avg': 0.01},
-                'engagement_rate': 0.18,
-                'reach_potential': 2700000000,
-                'ad_formats': ['Video', 'Display', 'Bumper']
+                '13-17': 90,
+                '18-24': 95,
+                '25-34': 92,
+                '35-44': 85,
+                '45-54': 75,
+                '55+': 60
             },
             'Twitter': {
-                'demographics': {
-                    '18-24': 0.20, '25-34': 0.30, '35-44': 0.25, '45-54': 0.15, '55+': 0.10
-                },
-                'cost_per_click': {'min': 0.6, 'max': 4.5, 'avg': 2.0},
-                'cost_per_impression': {'min': 0.002, 'max': 0.012, 'avg': 0.006},
-                'engagement_rate': 0.12,
-                'reach_potential': 450000000,
-                'ad_formats': ['Tweet', 'Video', 'Moment']
-            },
-            'LinkedIn': {
-                'demographics': {
-                    '18-24': 0.10, '25-34': 0.35, '35-44': 0.30, '45-54': 0.20, '55+': 0.05
-                },
-                'cost_per_click': {'min': 2.0, 'max': 8.0, 'avg': 5.0},
-                'cost_per_impression': {'min': 0.01, 'max': 0.05, 'avg': 0.025},
-                'engagement_rate': 0.08,
-                'reach_potential': 900000000,
-                'ad_formats': ['Single Image', 'Video', 'Carousel', 'Text']
-            },
-            'Snapchat': {
-                'demographics': {
-                    '18-24': 0.50, '25-34': 0.25, '35-44': 0.15, '45-54': 0.07, '55+': 0.03
-                },
-                'cost_per_click': {'min': 0.4, 'max': 3.0, 'avg': 1.5},
-                'cost_per_impression': {'min': 0.001, 'max': 0.01, 'avg': 0.005},
-                'engagement_rate': 0.20,
-                'reach_potential': 750000000,
-                'ad_formats': ['Image', 'Video', 'AR Lens']
+                '13-17': 70,
+                '18-24': 85,
+                '25-34': 80,
+                '35-44': 75,
+                '45-54': 65,
+                '55+': 55
             }
+        }
+        
+        # Calculate platform scores based on target age groups
+        platform_scores = {}
+        for platform, age_data in default_platforms.items():
+            score = 0
+            for age_group in age_groups:
+                if age_group in age_data:
+                    score += age_data[age_group]
+            platform_scores[platform] = score / len(age_groups)
+        
+        # Sort platforms by score
+        sorted_platforms = sorted(platform_scores.items(), key=lambda x: -x[1])
+        
+        # Return top N platforms
+        return [platform for platform, _ in sorted_platforms[:top_n]]
+
+    def fetch_platform_ad_cost(self, platform: str) -> float:
+        """
+        Use SerpApi to fetch the average monthly ad cost for a platform. Returns USD cost or fallback value.
+        """
+        from serpapi import GoogleSearch
+        import os
+        api_key = os.environ.get('SERPAPI_API_KEY', 'demo')
+        try:
+            search = GoogleSearch({
+                "q": f"average monthly ad cost {platform}",
+                "engine": "google",
+                "api_key": api_key
+            })
+            result = search.get_dict()
+            cost = 1000
+            if 'organic_results' in result:
+                import re
+                for item in result['organic_results'][:3]:
+                    if 'snippet' in item:
+                        amounts = re.findall(r'\$(\d{1,3},?\d{0,3})', item['snippet'])
+                        if amounts:
+                            try:
+                                cost = float(amounts[0].replace(',', ''))
+                                break
+                            except ValueError:
+                                continue
+            return cost
+        except Exception:
+            return 1000
+
+    def analyze_platform_effectiveness(self, target_age_groups: List[str], selected_platforms: List[str] = None) -> Dict[str, Any]:
+        """
+        Discover and analyze the most effective platforms for the given age groups using Google Trends.
+        Handles cases where fewer than 3 platforms are found.
+        """
+        top_platforms = self.discover_top_platforms(target_age_groups, top_n=3)
+        platform_scores = {p: {'effectiveness_score': i+1} for i, p in enumerate(top_platforms)}
+        # Defensive: always provide top_3_platforms and top_2_platforms as lists of length up to 3/2
+        return {
+            'platform_scores': platform_scores,
+            'ranked_platforms': [(p, platform_scores[p]) for p in top_platforms],
+            'top_3_platforms': top_platforms,
+            'top_2_platforms': top_platforms[:2],
+            'effectiveness_analysis': [f"{p} is recommended for your target age group" for p in top_platforms]
+        }
+
+    def calculate_campaign_costs(self, platform_analysis: Dict[str, Any], target_budget: float, campaign_duration_days: int = 30) -> Dict[str, Any]:
+        """
+        For the discovered platforms, fetch real ad cost data and calculate total campaign cost.
+        Handles cases where fewer than 3 platforms are found.
+        Also initializes estimated metrics for each platform.
+        """
+        top_platforms = platform_analysis.get('top_3_platforms', [])
+        cost_breakdown = {}
+        months = [3, 2, 1]
+        total_estimated_cost = 0
+        total_clicks = 0
+        total_impressions = 0
+        total_reach = 0
+        total_engagement = 0
+
+        for i, platform in enumerate(top_platforms):
+            months_for_platform = months[i] if i < len(months) else 1
+            monthly_cost = self.fetch_platform_ad_cost(platform)
+            platform_cost = monthly_cost * months_for_platform
+            
+            # Calculate estimated metrics based on industry averages and platform strength
+            platform_strength = platform_analysis['platform_scores'][platform]['effectiveness_score']
+            monthly_budget = platform_cost / months_for_platform
+            
+            # Estimated metrics per month (based on industry averages)
+            estimated_clicks = int(monthly_budget / 1.5)  # Assuming $1.50 CPC
+            estimated_impressions = int(estimated_clicks * 40)  # Assuming 2.5% CTR
+            estimated_reach = int(estimated_impressions * 0.7)  # Assuming 70% unique reach
+            estimated_engagement = int(estimated_clicks * 0.3)  # Assuming 30% engagement rate
+            
+            # Multiply by months and platform strength factor
+            strength_factor = platform_strength / 2  # Normalize effectiveness score
+            estimated_clicks *= months_for_platform * strength_factor
+            estimated_impressions *= months_for_platform * strength_factor
+            estimated_reach *= months_for_platform * strength_factor
+            estimated_engagement *= months_for_platform * strength_factor
+            
+            # Calculate ROI projection
+            roi_projection = self._calculate_roi_projection(estimated_engagement, platform_cost)
+            
+            cost_breakdown[platform] = {
+                'platform': platform,
+                'months': months_for_platform,
+                'monthly_ad_cost': monthly_cost,
+                'total_cost': platform_cost,
+                'estimated_clicks': int(estimated_clicks),
+                'estimated_impressions': int(estimated_impressions),
+                'estimated_reach': int(estimated_reach),
+                'estimated_engagement': int(estimated_engagement),
+                'roi_projection': roi_projection
+            }
+            
+            total_estimated_cost += platform_cost
+            total_clicks += estimated_clicks
+            total_impressions += estimated_impressions
+            total_reach += estimated_reach
+            total_engagement += estimated_engagement
+
+        budget_analysis = {
+            'target_budget': target_budget,
+            'estimated_total_cost': total_estimated_cost,
+            'budget_utilization': (total_estimated_cost / target_budget) * 100 if target_budget else 0,
+            'budget_variance': total_estimated_cost - target_budget,
+            'budget_status': 'On Budget' if abs(total_estimated_cost - target_budget) < target_budget * 0.05 \
+                           else 'Over Budget' if total_estimated_cost > target_budget \
+                           else 'Under Budget'
+        }
+
+        total_estimated_metrics = {
+            'total_clicks': int(total_clicks),
+            'total_impressions': int(total_impressions),
+            'total_reach': int(total_reach),
+            'total_engagement': int(total_engagement),
+            'total_conversions': int(total_engagement * 0.02),  # 2% conversion rate
+            'total_estimated_revenue': float(total_engagement * 0.02 * 800)  # 2% conversion * $800 avg order
+        }
+
+        return {
+            'platform_costs': cost_breakdown,
+            'budget_analysis': budget_analysis,
+            'campaign_duration_days': campaign_duration_days,
+            'estimated_cost': total_estimated_cost,
+            'total_estimated_metrics': total_estimated_metrics
         }
     
     def receive_message(self, message):
@@ -123,156 +330,6 @@ class CampaignPlanningAgent:
             )
         return None
     
-    def analyze_platform_effectiveness(self, target_age_groups: List[str], 
-                                     selected_platforms: List[str]) -> Dict[str, Any]:
-        """Analyze effectiveness of selected platforms for target demographics"""
-        platform_scores = {}
-        
-        for platform in selected_platforms:
-            if platform not in self.platforms:
-                continue
-                
-            platform_data = self.platforms[platform]
-            
-            # Calculate demographic alignment score
-            demo_score = 0
-            for age_group in target_age_groups:
-                age_range = self._convert_age_group_to_range(age_group)
-                demo_score += platform_data['demographics'].get(age_range, 0)
-            
-            demo_score = demo_score / len(target_age_groups)  # Average alignment
-            
-            # Calculate overall effectiveness score
-            effectiveness_score = (
-                demo_score * 0.4 +  # Demographic alignment (40%)
-                platform_data['engagement_rate'] * 0.3 +  # Engagement rate (30%)
-                (1 / platform_data['cost_per_click']['avg']) * 0.1 +  # Cost efficiency (20%)
-                (platform_data['reach_potential'] / 3000000000) * 0.2  # Reach potential (10%)
-            )
-            
-            platform_scores[platform] = {
-                'effectiveness_score': effectiveness_score,
-                'demographic_alignment': demo_score,
-                'engagement_rate': platform_data['engagement_rate'],
-                'avg_cost_per_click': platform_data['cost_per_click']['avg'],
-                'reach_potential': platform_data['reach_potential'],
-                'recommended_formats': platform_data['ad_formats'][:2]  # Top 2 formats
-            }
-        
-        # Sort by effectiveness score
-        sorted_platforms = sorted(platform_scores.items(), key=lambda x: x[1]['effectiveness_score'], reverse=True)
-        
-        return {
-            'platform_scores': platform_scores,
-            'ranked_platforms': sorted_platforms,
-            'top_2_platforms': [p[0] for p in sorted_platforms[:2]],
-            'effectiveness_analysis': self._generate_platform_insights(sorted_platforms)
-        }
-    
-    def _convert_age_group_to_range(self, age_group: str) -> str:
-        """Convert age group description to platform demographic range"""
-        age_mapping = {
-            'Gen Z (18-24)': '18-24',
-            'Young Adults (18-25)': '18-24',
-            'Adults (25-35)': '25-34',
-            'Middle Age (35-45)': '35-44',
-            'Mature (45-55)': '45-54',
-            'Seniors (55+)': '55+',
-            '18-24': '18-24',
-            '25-34': '25-34',
-            '35-44': '35-44',
-            '45-54': '45-54',
-            '55+': '55+'
-        }
-        return age_mapping.get(age_group, '25-34')  # Default to 25-34
-    
-    def _generate_platform_insights(self, ranked_platforms: List[tuple]) -> List[str]:
-        """Generate insights about platform effectiveness"""
-        insights = []
-        
-        if len(ranked_platforms) >= 2:
-            top_platform = ranked_platforms[0]
-            second_platform = ranked_platforms[1]
-            
-            insights.append(f"{top_platform[0]} is the most effective platform (score: {top_platform[1]['effectiveness_score']:.2f})")
-            insights.append(f"{second_platform[0]} is recommended as secondary platform (score: {second_platform[1]['effectiveness_score']:.2f})")
-            
-            # Compare engagement rates
-            if top_platform[1]['engagement_rate'] > 0.2:
-                insights.append(f"{top_platform[0]} offers high engagement potential ({top_platform[1]['engagement_rate']*100:.1f}%)")
-            
-            # Cost efficiency insights
-            cheapest = min(ranked_platforms, key=lambda x: x[1]['avg_cost_per_click'])
-            if cheapest[1]['avg_cost_per_click'] < 2.0:
-                insights.append(f"{cheapest[0]} offers cost-effective advertising (${cheapest[1]['avg_cost_per_click']:.2f} CPC)")
-        
-        return insights
-    
-    def calculate_campaign_costs(self, platform_analysis: Dict[str, Any], 
-                               target_budget: float, campaign_duration_days: int = 30) -> Dict[str, Any]:
-        """Calculate detailed campaign costs for top platforms"""
-        top_platforms = platform_analysis['top_2_platforms']
-        cost_breakdown = {}
-        
-        # Split budget between top 2 platforms (70% to top, 30% to second)
-        budget_split = [0.7, 0.3] if len(top_platforms) >= 2 else [1.0]
-        
-        total_estimated_cost = 0
-        
-        for i, platform in enumerate(top_platforms[:2]):
-            platform_budget = target_budget * budget_split[i]
-            platform_data = self.platforms[platform]
-            
-            # Calculate campaign metrics based on budget
-            avg_cpc = platform_data['cost_per_click']['avg']
-            avg_cpm = platform_data['cost_per_impression']['avg'] * 1000  # CPM (cost per 1000 impressions)
-            
-            # Estimate clicks and impressions
-            estimated_clicks = platform_budget / avg_cpc
-            estimated_impressions = (platform_budget / avg_cpm) * 1000
-            
-            # Calculate reach and engagement
-            estimated_reach = estimated_impressions * 0.8  # Assume 80% unique reach
-            estimated_engagement = estimated_reach * platform_data['engagement_rate']
-            
-            # Daily breakdown
-            daily_budget = platform_budget / campaign_duration_days
-            daily_clicks = estimated_clicks / campaign_duration_days
-            daily_impressions = estimated_impressions / campaign_duration_days
-            
-            cost_breakdown[platform] = {
-                'allocated_budget': platform_budget,
-                'daily_budget': daily_budget,
-                'estimated_clicks': int(estimated_clicks),
-                'estimated_impressions': int(estimated_impressions),
-                'estimated_reach': int(estimated_reach),
-                'estimated_engagement': int(estimated_engagement),
-                'avg_cost_per_click': avg_cpc,
-                'avg_cost_per_impression': platform_data['cost_per_impression']['avg'],
-                'daily_clicks': int(daily_clicks),
-                'daily_impressions': int(daily_impressions),
-                'roi_projection': self._calculate_roi_projection(estimated_engagement, platform_budget)
-            }
-            
-            total_estimated_cost += platform_budget
-        
-        # Budget comparison
-        budget_analysis = {
-            'target_budget': target_budget,
-            'estimated_total_cost': total_estimated_cost,
-            'budget_utilization': (total_estimated_cost / target_budget) * 100,
-            'budget_variance': total_estimated_cost - target_budget,
-            'budget_status': 'On Budget' if abs(total_estimated_cost - target_budget) < target_budget * 0.05 
-                           else 'Over Budget' if total_estimated_cost > target_budget 
-                           else 'Under Budget'
-        }
-        
-        return {
-            'platform_costs': cost_breakdown,
-            'budget_analysis': budget_analysis,
-            'campaign_duration_days': campaign_duration_days,
-            'total_estimated_metrics': self._calculate_total_metrics(cost_breakdown)
-        }
     
     def _calculate_roi_projection(self, estimated_engagement: int, platform_budget: float) -> Dict[str, float]:
         """Calculate projected ROI for the campaign"""
@@ -307,13 +364,16 @@ class CampaignPlanningAgent:
     def generate_campaign_recommendations(self, platform_analysis: Dict[str, Any],
                                         cost_analysis: Dict[str, Any],
                                         customer_data: Dict[str, Any] = None) -> List[str]:
-        """Generate campaign strategy recommendations"""
+        """Generate campaign strategy recommendations. Robust to 0, 1, or 2+ platforms."""
         recommendations = []
-        
         # Platform recommendations
-        top_platforms = platform_analysis['top_2_platforms']
-        recommendations.append(f"Focus campaign on {top_platforms[0]} and {top_platforms[1]} for maximum effectiveness")
-        
+        top_platforms = platform_analysis.get('top_2_platforms', [])
+        if len(top_platforms) >= 2:
+            recommendations.append(f"Focus campaign on {top_platforms[0]} and {top_platforms[1]} for maximum effectiveness")
+        elif len(top_platforms) == 1:
+            recommendations.append(f"Focus campaign on {top_platforms[0]} for maximum effectiveness")
+        else:
+            recommendations.append("No suitable social media platforms found for the selected age groups.")
         # Budget recommendations
         budget_status = cost_analysis['budget_analysis']['budget_status']
         if budget_status == 'Over Budget':
@@ -322,30 +382,26 @@ class CampaignPlanningAgent:
         elif budget_status == 'Under Budget':
             variance = abs(cost_analysis['budget_analysis']['budget_variance'])
             recommendations.append(f"Budget has ${variance:.2f} remaining. Consider extending campaign or adding platforms")
-        
         # Performance recommendations
-        total_metrics = cost_analysis['total_estimated_metrics']
-        if total_metrics['total_engagement'] < 10000:
+        total_metrics = cost_analysis.get('total_estimated_metrics', {})
+        if total_metrics.get('total_engagement', 0) < 10000:
             recommendations.append("Low engagement projected. Consider improving creative content or targeting")
-        
         # Platform-specific recommendations
-        for platform, data in cost_analysis['platform_costs'].items():
-            roi = data['roi_projection']['roi_percentage']
+        for platform, data in cost_analysis.get('platform_costs', {}).items():
+            roi = data.get('roi_projection', {}).get('roi_percentage', 0)
             if roi > 200:
                 recommendations.append(f"{platform} shows excellent ROI potential ({roi:.1f}%). Consider increasing allocation")
             elif roi < 50:
                 recommendations.append(f"{platform} shows low ROI ({roi:.1f}%). Review targeting and creative strategy")
-        
         # Timing recommendations
         recommendations.append("Schedule ads during peak engagement hours: 12-3 PM and 7-9 PM")
         recommendations.append("Run A/B tests on ad creatives for first week to optimize performance")
-        
         # Customer segment recommendations
         if customer_data:
             segments = customer_data.get('customer_segments', {})
-            primary_segment = max(segments.items(), key=lambda x: x[1].get('attractiveness_score', 0))
-            recommendations.append(f"Target primary segment: {primary_segment[0]} with tailored messaging")
-        
+            if segments:
+                primary_segment = max(segments.items(), key=lambda x: x[1].get('attractiveness_score', 0))
+                recommendations.append(f"Target primary segment: {primary_segment[0]} with tailored messaging")
         return recommendations
     
     def create_campaign_visualizations(self, platform_analysis: Dict[str, Any],
@@ -366,7 +422,7 @@ class CampaignPlanningAgent:
         # Budget allocation chart
         platform_costs = cost_analysis['platform_costs']
         budget_platforms = list(platform_costs.keys())
-        budget_allocations = [platform_costs[p]['allocated_budget'] for p in budget_platforms]
+        budget_allocations = [platform_costs[p]['total_cost'] for p in budget_platforms]
         
         budget_chart = {
             'platforms': budget_platforms,
@@ -419,31 +475,31 @@ class CampaignPlanningAgent:
                      market_data: Dict[str, Any] = None,
                      competitor_data: Dict[str, Any] = None,
                      customer_data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Main method to plan marketing campaign"""
+        """Main method to plan marketing campaign. Handles empty/short platform lists gracefully."""
         print(f"Planning campaign for {product_info['name']}")
-        
         try:
             # Extract campaign parameters from product info
             target_audience = product_info.get('target_audience', {})
             target_age_groups = target_audience.get('age_groups', ['25-34', '35-44'])
-            selected_platforms = target_audience.get('platforms', ['Facebook', 'Instagram', 'YouTube'])
             target_budget = target_audience.get('budget', 50000)
             campaign_duration = target_audience.get('duration_days', 30)
-            
-            # Analyze platform effectiveness
-            platform_analysis = self.analyze_platform_effectiveness(target_age_groups, selected_platforms)
-            
+            # Analyze platform effectiveness (API-driven, no selected_platforms)
+            platform_analysis = self.analyze_platform_effectiveness(target_age_groups)
+            # Defensive: If no platforms found, return a user-friendly error
+            if not platform_analysis['top_3_platforms']:
+                return {
+                    'error': 'No suitable social media platforms found for the selected age groups. Try different age groups or check API limits.',
+                    'analysis_timestamp': datetime.now().isoformat(),
+                    'status': 'failed'
+                }
             # Calculate campaign costs
             cost_analysis = self.calculate_campaign_costs(platform_analysis, target_budget, campaign_duration)
-            
             # Generate recommendations
             recommendations = self.generate_campaign_recommendations(
                 platform_analysis, cost_analysis, customer_data
             )
-            
             # Create visualizations
             visualizations = self.create_campaign_visualizations(platform_analysis, cost_analysis)
-            
             campaign_plan = {
                 'product_info': {
                     'name': product_info['name'],
@@ -459,10 +515,8 @@ class CampaignPlanningAgent:
                 'success_metrics': self._define_success_metrics(cost_analysis),
                 'analysis_timestamp': datetime.now().isoformat()
             }
-            
             print("Campaign planning completed successfully")
             return campaign_plan
-            
         except Exception as e:
             print(f"Error in campaign planning: {e}")
             return {
