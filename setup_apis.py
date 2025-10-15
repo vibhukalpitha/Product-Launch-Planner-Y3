@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+"""
+API Setup Assistant for Samsung Product Launch Planner
+Helps users configure their API keys for real data integration
+"""
+import os
+import sys
+import json
+from datetime import datetime
+from typing import Dict, Any
+
+def print_banner():
+    """Print setup banner"""
+    print("🔑 Samsung Product Launch Planner - API Setup Assistant")
+    print("=" * 65)
+    print("This tool helps you configure API keys for real-time data integration")
+    print()
+
+def get_api_info() -> Dict[str, Dict[str, Any]]:
+    """Get information about available APIs"""
+    return {
+        'alpha_vantage': {
+            'name': 'Alpha Vantage (Stock Market Data)',
+            'url': 'https://www.alphavantage.co/support/#api-key',
+            'free_tier': '25 requests/day',
+            'description': 'Real-time stock prices and market data',
+            'required': False,
+            'difficulty': 'Easy'
+        },
+        'news_api': {
+            'name': 'News API (Market News & Sentiment)',
+            'url': 'https://newsapi.org/register',
+            'free_tier': '1000 requests/month',
+            'description': 'News articles and sentiment analysis',
+            'required': False,
+            'difficulty': 'Easy'
+        },
+        'fred': {
+            'name': 'FRED (Economic Indicators)',
+            'url': 'https://fred.stlouisfed.org/docs/api/api_key.html',
+            'free_tier': 'Unlimited',
+            'description': 'US Federal Reserve economic data',
+            'required': False,
+            'difficulty': 'Easy'
+        },
+        'twitter': {
+            'name': 'Twitter API v2 (Social Media Sentiment)',
+            'url': 'https://developer.twitter.com/en/portal/dashboard',
+            'free_tier': '500,000 tweets/month',
+            'description': 'Real-time social media sentiment',
+            'required': False,
+            'difficulty': 'Medium (Requires approval)'
+        },
+        'reddit': {
+            'name': 'Reddit API (Community Sentiment)',
+            'url': 'https://www.reddit.com/prefs/apps',
+            'free_tier': '60 requests/minute',
+            'description': 'Community discussions and sentiment',
+            'required': False,
+            'difficulty': 'Easy'
+        },
+        'rapidapi': {
+            'name': 'RapidAPI (Multiple Data Sources)',
+            'url': 'https://rapidapi.com/',
+            'free_tier': 'Varies by API',
+            'description': 'Access to multiple data APIs',
+            'required': False,
+            'difficulty': 'Easy'
+        }
+    }
+
+def display_api_list():
+    """Display available APIs"""
+    apis = get_api_info()
+    
+    print("📊 Available APIs for Real-Time Data:")
+    print()
+    
+    for i, (api_id, info) in enumerate(apis.items(), 1):
+        print(f"{i}. {info['name']}")
+        print(f"   🌐 Sign up: {info['url']}")
+        print(f"   🆓 Free tier: {info['free_tier']}")
+        print(f"   📝 Description: {info['description']}")
+        print(f"   🎯 Difficulty: {info['difficulty']}")
+        print()
+
+def create_env_file():
+    """Create or update .env file with API keys"""
+    print("🔧 Setting up your .env file...")
+    print()
+    
+    # Check if .env already exists
+    env_path = '.env'
+    existing_keys = {}
+    
+    if os.path.exists(env_path):
+        print("📁 Found existing .env file. Loading current values...")
+        try:
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        existing_keys[key] = value
+        except Exception as e:
+            print(f"Warning: Could not read existing .env file: {e}")
+    
+    # API key prompts
+    api_keys = {
+        'ALPHA_VANTAGE_API_KEY': 'Alpha Vantage API Key',
+        'NEWS_API_KEY': 'News API Key',
+        'FRED_API_KEY': 'FRED API Key',
+        'TWITTER_BEARER_TOKEN': 'Twitter Bearer Token',
+        'REDDIT_CLIENT_ID': 'Reddit Client ID',
+        'REDDIT_CLIENT_SECRET': 'Reddit Client Secret',
+        'RAPIDAPI_KEY': 'RapidAPI Key'
+    }
+    
+    new_keys = {}
+    
+    print("Enter your API keys (press Enter to skip or keep existing value):")
+    print("💡 Tip: You can add these later by editing the .env file")
+    print()
+    
+    for key, description in api_keys.items():
+        current_value = existing_keys.get(key, '')
+        display_current = f" (current: {current_value[:10]}...)" if current_value else ""
+        
+        user_input = input(f"🔑 {description}{display_current}: ").strip()
+        
+        if user_input:
+            new_keys[key] = user_input
+        elif current_value:
+            new_keys[key] = current_value
+    
+    # Write .env file
+    try:
+        with open(env_path, 'w') as f:
+            f.write("# Samsung Product Launch Planner - API Keys\n")
+            f.write("# Generated by setup assistant\n")
+            f.write(f"# Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            
+            f.write("# =============================================================================\n")
+            f.write("# MARKET DATA APIs\n")
+            f.write("# =============================================================================\n\n")
+            
+            f.write(f"ALPHA_VANTAGE_API_KEY={new_keys.get('ALPHA_VANTAGE_API_KEY', '')}\n")
+            f.write(f"FRED_API_KEY={new_keys.get('FRED_API_KEY', '')}\n\n")
+            
+            f.write("# =============================================================================\n")
+            f.write("# NEWS & SOCIAL MEDIA APIs\n")
+            f.write("# =============================================================================\n\n")
+            
+            f.write(f"NEWS_API_KEY={new_keys.get('NEWS_API_KEY', '')}\n")
+            f.write(f"TWITTER_BEARER_TOKEN={new_keys.get('TWITTER_BEARER_TOKEN', '')}\n")
+            f.write(f"REDDIT_CLIENT_ID={new_keys.get('REDDIT_CLIENT_ID', '')}\n")
+            f.write(f"REDDIT_CLIENT_SECRET={new_keys.get('REDDIT_CLIENT_SECRET', '')}\n")
+            f.write("REDDIT_USER_AGENT=SamsungProductLaunchPlanner/1.0\n\n")
+            
+            f.write("# =============================================================================\n")
+            f.write("# ADDITIONAL APIs\n")
+            f.write("# =============================================================================\n\n")
+            
+            f.write(f"RAPIDAPI_KEY={new_keys.get('RAPIDAPI_KEY', '')}\n\n")
+            
+            f.write("# =============================================================================\n")
+            f.write("# SETTINGS\n")
+            f.write("# =============================================================================\n\n")
+            
+            f.write("# Rate limiting (requests per minute)\n")
+            f.write("ALPHA_VANTAGE_RATE_LIMIT=5\n")
+            f.write("NEWS_API_RATE_LIMIT=16\n")
+            f.write("TWITTER_RATE_LIMIT=300\n")
+            f.write("REDDIT_RATE_LIMIT=60\n\n")
+            
+            f.write("# Cache settings\n")
+            f.write("CACHE_ENABLED=true\n")
+            f.write("CACHE_DURATION_HOURS=24\n")
+            f.write("API_TIMEOUT=30\n")
+        
+        print(f"✅ .env file created successfully!")
+        print(f"📁 Location: {os.path.abspath(env_path)}")
+        
+        # Count configured APIs
+        configured_count = sum(1 for key, value in new_keys.items() if value)
+        total_count = len(api_keys)
+        
+        print(f"🔑 Configured APIs: {configured_count}/{total_count}")
+        
+        if configured_count == 0:
+            print("\n⚠️ No API keys configured. The system will use simulated data.")
+            print("💡 You can run this setup again or manually edit the .env file to add keys.")
+        else:
+            print(f"\n🎉 {configured_count} API(s) configured! Real data integration is ready.")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error creating .env file: {e}")
+        return False
+
+def test_api_keys():
+    """Test configured API keys"""
+    print("\n🧪 Testing API Keys...")
+    print("=" * 30)
+    
+    try:
+        # Import and test
+        from utils.api_manager import api_manager
+        
+        api_manager.print_api_status()
+        
+        # Test a few APIs
+        test_results = {}
+        
+        if api_manager.is_api_enabled('alpha_vantage'):
+            print("🧪 Testing Alpha Vantage...")
+            try:
+                test_results['alpha_vantage'] = api_manager.validate_api_key('alpha_vantage')
+            except:
+                test_results['alpha_vantage'] = False
+        
+        if api_manager.is_api_enabled('news_api'):
+            print("🧪 Testing News API...")
+            try:
+                test_results['news_api'] = api_manager.validate_api_key('news_api')
+            except:
+                test_results['news_api'] = False
+        
+        # Print results
+        print("\n📊 Test Results:")
+        for api, result in test_results.items():
+            status = "✅ Working" if result else "❌ Failed"
+            print(f"   {api}: {status}")
+        
+        if any(test_results.values()):
+            print("\n🎉 At least one API is working! Real data integration is functional.")
+        else:
+            print("\n⚠️ API tests failed. Check your keys or internet connection.")
+            print("💡 The system will work with simulated data if APIs are unavailable.")
+        
+    except Exception as e:
+        print(f"⚠️ Could not test APIs: {e}")
+        print("💡 You can test them later by running the application.")
+
+def show_next_steps():
+    """Show next steps after setup"""
+    print("\n🚀 Next Steps:")
+    print("=" * 20)
+    print("1. Run the application: python run_app.py")
+    print("2. The system will automatically use real data when APIs are available")
+    print("3. Check the UI for data source indicators")
+    print("4. View logs to see which APIs are being used")
+    print()
+    print("📚 Additional Resources:")
+    print("- Edit .env file manually to update keys")
+    print("- Check API_DOCUMENTATION.md for detailed setup guides")
+    print("- Run this setup again anytime: python setup_apis.py")
+    print()
+    print("🎯 Tips for better data:")
+    print("- Start with News API and FRED (easiest to set up)")
+    print("- Alpha Vantage provides great stock market data")
+    print("- Twitter requires application approval but gives real-time sentiment")
+
+def main():
+    """Main setup function"""
+    print_banner()
+    
+    print("This assistant will help you set up API keys for real-time data.")
+    print("All APIs are optional - the system works with simulated data too!")
+    print()
+    
+    choice = input("What would you like to do?\n1. View available APIs\n2. Configure API keys\n3. Test existing keys\n4. Exit\n\nChoice (1-4): ").strip()
+    
+    if choice == '1':
+        display_api_list()
+        print("\nRun this script again with option 2 to configure your keys.")
+    
+    elif choice == '2':
+        display_api_list()
+        print("\nNow let's configure your API keys:")
+        print("=" * 40)
+        if create_env_file():
+            test_choice = input("\nWould you like to test the configured keys? (y/n): ").lower()
+            if test_choice == 'y':
+                test_api_keys()
+            show_next_steps()
+    
+    elif choice == '3':
+        if os.path.exists('.env'):
+            test_api_keys()
+        else:
+            print("❌ No .env file found. Run option 2 first to configure API keys.")
+    
+    elif choice == '4':
+        print("👋 Setup cancelled. You can run this anytime!")
+    
+    else:
+        print("❌ Invalid choice. Please run the script again.")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n👋 Setup cancelled by user.")
+    except Exception as e:
+        print(f"\n❌ Setup error: {e}")
+        print("Please check your Python environment and try again.")
