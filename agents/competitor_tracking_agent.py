@@ -21,10 +21,11 @@ try:
     from utils.intelligent_competitor_discovery import IntelligentCompetitorDiscovery
     real_data_available = True
     discovery_available = True
-except ImportError:
+except Exception as e:
+    # Catch any exception during optional imports (some connectors print emojis or require extra deps)
     real_data_available = False
     discovery_available = False
-    logging.warning("Real data connector or intelligent discovery not available, using simulated data")
+    logging.warning(f"Real data connector or intelligent discovery not available, using simulated data: {e}")
 
 def simple_sentiment_analysis(text: str) -> float:
     """Simple rule-based sentiment analysis"""
@@ -67,19 +68,119 @@ class CompetitorTrackingAgent:
         if not feedback_list:
             return "No feedback available to analyze."
 
-        # Example: Use simple rules, but can be replaced with API calls for NLP/sentiment/topic extraction
-        positives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'positive']
-        negatives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'negative']
-        advice_parts = []
-        if negatives:
-            advice_parts.append("Address these common complaints: " + "; ".join(negatives[:2]))
-        if positives:
-            advice_parts.append("Leverage these strengths: " + "; ".join(positives[:2]))
-        if not advice_parts:
-            advice_parts.append("Monitor feedback for actionable insights.")
-        return "\n".join(advice_parts)
-    """Agent for tracking competitors and analyzing market positioning"""
-    
+        # Enhanced analysis: sentiment normalization, keyword extraction, and mapped actions
+        try:
+            comments = [str(fb.get('comment', '')).strip() for fb in feedback_list if fb.get('comment')]
+
+            # Sentiment: prefer explicit sentiment field, otherwise compute from text
+            pos_comments = []
+            neg_comments = []
+            neu_comments = []
+            scores = []
+            for fb in feedback_list:
+                text = str(fb.get('comment', '')).strip()
+                s = fb.get('sentiment')
+                # compute score if sentiment not explicit or neutral
+                if s in (None, '', 'neutral'):
+                    try:
+                        score = simple_sentiment_analysis(text)
+                    except Exception:
+                        score = 0.0
+                    scores.append(score)
+                    # use a lower threshold so neutral comments still surface issues
+                    if score > 0.15:
+                        pos_comments.append(text)
+                    elif score < -0.15:
+                        neg_comments.append(text)
+                    else:
+                        neu_comments.append(text)
+                else:
+                    if s == 'positive':
+                        pos_comments.append(text)
+                    elif s == 'negative':
+                        neg_comments.append(text)
+                    else:
+                        neu_comments.append(text)
+
+            # Tokenize and extract frequent keywords from all comments (negatives weighted)
+            all_text = ' '.join(comments).lower()
+            all_neg_text = ' '.join(neg_comments).lower() or all_text
+            tokens = re.findall(r"\w+", all_neg_text)
+            stopwords = set(["the","and","for","with","this","that","have","has","was","are","but","not","our","you","your","device","product","phone","samsung"]).union(set())
+            freq = {}
+            for t in tokens:
+                if len(t) <= 2 or t in stopwords or t.isdigit():
+                    continue
+                freq[t] = freq.get(t, 0) + 1
+
+            top_keywords = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:5]
+            keywords = [k for k, _ in top_keywords]
+
+            # Map keywords to suggested actions
+            action_map = {
+                'battery': 'Investigate battery drain and optimize power management or battery capacity.',
+                'camera': 'Improve camera tuning, image processing, and advertise camera strengths.',
+                'price': 'Re-evaluate pricing strategy or highlight value in marketing.',
+                'support': 'Enhance customer support response times and self-help documentation.',
+                'update': 'Prioritize software updates and bug fixes; improve update cadence.',
+                'performance': 'Optimize performance hotspots and memory/cpu usage.',
+                'screen': 'Address display issues and ensure quality control for panels.',
+                'sound': 'Improve audio performance or speaker tuning.',
+                'battery-life': 'Investigate battery drain and optimize power management or battery capacity.'
+            }
+
+            suggested_actions = []
+            for kw in keywords:
+                if kw in action_map:
+                    suggested_actions.append(action_map[kw])
+                else:
+                    # Try small variants, e.g., plural forms or hyphenation
+                    k2 = kw.rstrip('s')
+                    if k2 in action_map:
+                        suggested_actions.append(action_map[k2])
+
+
+            # Compose advice text
+            advice_lines = []
+            if neg_comments:
+                if suggested_actions:
+                    advice_lines.append("Top issues detected and suggested fixes:")
+                    for act in suggested_actions[:3]:
+                        advice_lines.append(f"- {act}")
+                else:
+                    # If no mapped actions, show sample negative snippets
+                    advice_lines.append("Common complaints detected:")
+                    for c in neg_comments[:3]:
+                        advice_lines.append(f"- {c}")
+
+            if pos_comments:
+                advice_lines.append("Strengths to promote:")
+                for c in pos_comments[:3]:
+                    advice_lines.append(f"- {c}")
+
+            # Add a monitoring recommendation with channel hints if available
+            platforms = {}
+            for fb in feedback_list:
+                p = fb.get('platform') or fb.get('source') or 'unknown'
+                platforms[p] = platforms.get(p, 0) + 1
+            if platforms:
+                top_platforms = sorted(platforms.items(), key=lambda x: x[1], reverse=True)[:3]
+                platform_names = ", ".join(p for p, _ in top_platforms)
+                advice_lines.append(f"Monitor these channels closely for trends: {platform_names}")
+
+            if not advice_lines:
+                # Always provide at least an investigative suggestion using top keywords
+                if keywords:
+                    advice_lines.append("Investigate these topics in user feedback:")
+                    for k in keywords[:5]:
+                        advice_lines.append(f"- {k}")
+                else:
+                    advice_lines.append("No clear actionable feedback found — monitor feedback for actionable insights.")
+
+            return "\n".join(advice_lines)
+        except Exception as e:
+            return f"Unable to analyze feedback: {e}"
+
     def __init__(self, coordinator):
         self.coordinator = coordinator
         self.name = "competitor_tracker"
@@ -96,10 +197,10 @@ class CompetitorTrackingAgent:
         # Initialize intelligent competitor discovery
         if discovery_available:
             self.competitor_discovery = IntelligentCompetitorDiscovery()
-            print("✅ Intelligent Competitor Discovery System loaded")
+            logging.info("Intelligent Competitor Discovery System loaded")
         else:
             self.competitor_discovery = None
-            print("⚠️ Using basic competitor mapping")
+            logging.warning("Using basic competitor mapping")
         
         # Free APIs for competitor analysis
         self.apis = {
@@ -147,8 +248,8 @@ class CompetitorTrackingAgent:
         Returns:
             Comprehensive competitor discovery results
         """
-        print(f"🔍 Starting intelligent competitor discovery for: {product_name}")
-        
+        logging.info(f"Starting intelligent competitor discovery for: {product_name}")
+
         if self.competitor_discovery:
             try:
                 # Use intelligent discovery system
@@ -157,17 +258,17 @@ class CompetitorTrackingAgent:
                     category=category,
                     price_range=price_range
                 )
-                
-                print(f"✅ Intelligent discovery found:")
-                print(f"   🎯 {len(discovery_results['direct_competitors'])} direct competitors")
-                print(f"   🔄 {len(discovery_results['indirect_competitors'])} indirect competitors")
-                print(f"   🌟 {len(discovery_results['emerging_competitors'])} emerging competitors")
-                
+
+                logging.info("Intelligent discovery found results")
+                logging.info(f"Direct competitors: {len(discovery_results['direct_competitors'])}")
+                logging.info(f"Indirect competitors: {len(discovery_results['indirect_competitors'])}")
+                logging.info(f"Emerging competitors: {len(discovery_results['emerging_competitors'])}")
+
                 return discovery_results
-                
+
             except Exception as e:
-                print(f"⚠️ Intelligent discovery failed: {e}")
-                print("🔄 Falling back to category-based discovery...")
+                logging.warning(f"Intelligent discovery failed: {e}")
+                logging.info("Falling back to category-based discovery...")
         
         # Fallback to category-based discovery
         return self._fallback_competitor_discovery(product_name, category, price_range)
@@ -358,9 +459,9 @@ class CompetitorTrackingAgent:
         
         if not competitors:
             return sentiment_data  # Return empty dict for empty competitor list
-            
-        print(f"📊 Analyzing sentiment for {len(competitors)} competitors")
-        
+
+        logging.info(f"Analyzing sentiment for {len(competitors)} competitors")
+
         for competitor in competitors:
             if self.use_real_data and self.real_data_connector:
                 # Try to get real sentiment data
@@ -375,9 +476,8 @@ class CompetitorTrackingAgent:
             # Fall back to simulated data if real data failed or not available
             sim = self._generate_simulated_sentiment(competitor, category)
             sentiment_data[competitor] = self._normalize_sentiment_output(sim)
-            
-            print(f"✅ Generated sentiment data for {competitor}")
-        
+            logging.info(f"Generated sentiment data for {competitor}")
+
         return sentiment_data
 
     def fetch_recent_feedback(self, competitor: str, category: str = 'smartphones', limit: int = 5) -> List[Dict[str, Any]]:
@@ -803,52 +903,51 @@ class CompetitorTrackingAgent:
     
     def analyze_competitors(self, product_info: Dict[str, Any], market_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Main method to analyze competitors with intelligent discovery"""
-        
         product_name = product_info.get('name', 'Unknown Product')
         category = product_info.get('category', 'electronics')
         product_price = product_info.get('price', 500)
         price_range = product_info.get('price_range', 'mid-range')
-        
-        print(f"🔍 Analyzing competitors for {product_name} in {category}")
-        
+
+        logging.info(f"Analyzing competitors for {product_name} in {category}")
+
         try:
             # Step 1: Intelligent Competitor Discovery
-            print("\n🤖 Step 1: Intelligent Competitor Discovery")
+            logging.info("Step 1: Intelligent Competitor Discovery")
             discovery_results = self.discover_intelligent_competitors(
                 product_name=product_name,
-                category=category, 
+                category=category,
                 price_range=price_range
             )
-            
+
             # Get all discovered competitors for analysis
             all_discovered_competitors = (
-                discovery_results['direct_competitors'] + 
+                discovery_results['direct_competitors'] +
                 discovery_results['indirect_competitors']
             )
-            
-            print(f"✅ Discovery complete! Analyzing {len(all_discovered_competitors)} competitors")
-            
+
+            logging.info(f"Discovery complete! Analyzing {len(all_discovered_competitors)} competitors")
+
             # Step 2: Competitor Pricing Analysis
-            print("\n💰 Step 2: Competitor Pricing Analysis")
+            logging.info("Step 2: Competitor Pricing Analysis")
             pricing_analysis = self.get_competitor_pricing(
                 category=category,
                 product_price=product_price,
                 discovered_competitors=all_discovered_competitors
             )
-            
+
             # Step 3: Social Media Sentiment Analysis
-            print("\n📱 Step 3: Social Media Sentiment Analysis")
+            logging.info("Step 3: Social Media Sentiment Analysis")
             sentiment_analysis = self.get_social_media_sentiment(
                 category=category,
                 competitors=all_discovered_competitors[:5]  # Top 5 for sentiment analysis
             )
-            
+
             # Step 4: (Removed recommendations logic)
-            
+
             # Step 5: Create Visualizations
-            print("\n📊 Step 5: Creating Visualizations")
+            logging.info("Step 5: Creating Visualizations")
             visualizations = self.create_visualizations(pricing_analysis, sentiment_analysis)
-            
+
             # Compile comprehensive analysis result
             analysis_result = {
                 # Core analysis results
@@ -857,7 +956,7 @@ class CompetitorTrackingAgent:
                 'sentiment_analysis': sentiment_analysis,
 
                 'visualizations': visualizations,
-                
+
                 # Metadata
                 'analyzed_competitors': all_discovered_competitors,
                 'discovery_method': 'intelligent' if self.competitor_discovery else 'fallback',
@@ -865,7 +964,7 @@ class CompetitorTrackingAgent:
                 'product_category': category,
                 'product_name': product_name,
                 'our_price': product_price,
-                
+
                 # Summary insights
                 'key_insights': {
                     'total_competitors_found': len(all_discovered_competitors),
@@ -875,18 +974,18 @@ class CompetitorTrackingAgent:
                     'market_fragmentation': discovery_results['market_insights']['market_analysis']['market_fragmentation']
                 }
             }
-            
-            print("\n✅ Comprehensive competitor analysis completed successfully!")
-            print(f"📊 Analysis Summary:")
-            print(f"   🎯 Direct Competitors: {len(discovery_results['direct_competitors'])}")
-            print(f"   🔄 Indirect Competitors: {len(discovery_results['indirect_competitors'])}")
-            print(f"   💰 Price Position: {pricing_analysis['competitive_position']['position']}")
-            print(f"   📈 Market Fragmentation: {discovery_results['market_insights']['market_analysis']['market_fragmentation']}")
-            
+
+            logging.info("Comprehensive competitor analysis completed successfully!")
+            logging.info("Analysis Summary:")
+            logging.info(f"Direct Competitors: {len(discovery_results['direct_competitors'])}")
+            logging.info(f"Indirect Competitors: {len(discovery_results['indirect_competitors'])}")
+            logging.info(f"Price Position: {pricing_analysis['competitive_position']['position']}")
+            logging.info(f"Market Fragmentation: {discovery_results['market_insights']['market_analysis']['market_fragmentation']}")
+
             return analysis_result
-            
+
         except Exception as e:
-            print(f"❌ Error in competitor analysis: {e}")
+            logging.error(f"Error in competitor analysis: {e}")
             return {
                 'error': str(e),
                 'analysis_timestamp': datetime.now().isoformat(),

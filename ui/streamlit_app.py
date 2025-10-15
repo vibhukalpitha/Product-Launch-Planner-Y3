@@ -805,17 +805,37 @@ def display_competitor_analysis(analysis_results):
 
             # New Advice section based on feedback
             st.markdown("#### 📝 Advice to Improve Our Product")
-            advice = "- No feedback available to analyze."
+            advice_key = f"advice_{selected_competitor}"
+            # Use cached advice when available to avoid recomputing
+            advice = st.session_state.get(advice_key, "- No feedback available to analyze.")
             try:
                 coord = st.session_state.get('coordinator')
                 if coord and feedback:
+                    # Ask backend agent to analyze feedback
                     advice_result = coord.send_message('ui', 'competitor_tracker', 'analyze_feedback_and_advise', {
                         'feedback_list': feedback
                     })
                     if advice_result:
                         advice = advice_result
+                elif feedback:
+                    # Fallback: local quick analysis so UI updates even without coordinator
+                    positives = [fb['comment'] for fb in feedback if fb.get('sentiment') == 'positive']
+                    negatives = [fb['comment'] for fb in feedback if fb.get('sentiment') == 'negative']
+                    parts = []
+                    if negatives:
+                        parts.append("Address these common complaints: " + "; ".join(negatives[:2]))
+                    if positives:
+                        parts.append("Leverage these strengths: " + "; ".join(positives[:2]))
+                    if not parts:
+                        parts.append("Monitor feedback for actionable insights.")
+                    advice = "\n".join(parts)
+                else:
+                    advice = "- No feedback available to analyze."
             except Exception as e:
                 advice = f"- Unable to analyze feedback: {e}"
+
+            # Cache and display
+            st.session_state[advice_key] = advice
             st.markdown(advice)
     
     # Recommendations
