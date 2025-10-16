@@ -61,23 +61,100 @@ def simple_sentiment_analysis(text: str) -> float:
 class CompetitorTrackingAgent:
     def analyze_feedback_and_advise(self, feedback_list: list) -> str:
         """
-        Analyze a list of feedback dicts and return actionable advice for improving our product.
-        Uses simple rules and can be extended to use external APIs for deeper analysis.
+        Analyze feedback using sentiment analysis and topic extraction to provide actionable advice.
+        Uses a combination of RSS feeds and public APIs for real-time insights.
         """
         if not feedback_list:
             return "No feedback available to analyze."
 
-        # Example: Use simple rules, but can be replaced with API calls for NLP/sentiment/topic extraction
-        positives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'positive']
-        negatives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'negative']
-        advice_parts = []
-        if negatives:
-            advice_parts.append("Address these common complaints: " + "; ".join(negatives[:2]))
-        if positives:
-            advice_parts.append("Leverage these strengths: " + "; ".join(positives[:2]))
-        if not advice_parts:
-            advice_parts.append("Monitor feedback for actionable insights.")
-        return "\n".join(advice_parts)
+        try:
+            # Group feedback by sentiment
+            positives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'positive']
+            negatives = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'negative']
+            neutrals = [fb['comment'] for fb in feedback_list if fb.get('sentiment') == 'neutral']
+
+            # Get latest industry trends from RSS feeds
+            trends_url = "https://www.techradar.com/rss"
+            resp = requests.get(trends_url, timeout=10)
+            industry_trends = []
+            if resp.status_code == 200:
+                from xml.etree import ElementTree
+                root = ElementTree.fromstring(resp.content)
+                for item in root.findall('.//item')[:3]:
+                    title = item.find('title').text
+                    if title:
+                        industry_trends.append(title)
+
+            # Extract common themes from feedback using simple keyword analysis
+            def extract_themes(comments):
+                common_features = ['battery', 'screen', 'camera', 'price', 'performance', 
+                                 'design', 'software', 'quality', 'support', 'feature']
+                themes = {}
+                for comment in comments:
+                    comment_lower = comment.lower()
+                    for feature in common_features:
+                        if feature in comment_lower:
+                            themes[feature] = themes.get(feature, 0) + 1
+                return dict(sorted(themes.items(), key=lambda x: x[1], reverse=True))
+
+            positive_themes = extract_themes(positives)
+            negative_themes = extract_themes(negatives)
+
+            # Generate advice based on analysis
+            advice_parts = []
+
+            # 1. Strength Analysis
+            if positive_themes:
+                advice_parts.append("💪 Key Strengths to Leverage:")
+                for theme, count in list(positive_themes.items())[:2]:
+                    advice_parts.append(f"- Capitalize on positive {theme} feedback ({count} mentions)")
+
+            # 2. Improvement Areas
+            if negative_themes:
+                advice_parts.append("\n🎯 Priority Improvement Areas:")
+                for theme, count in list(negative_themes.items())[:2]:
+                    advice_parts.append(f"- Address {theme} concerns ({count} mentions)")
+
+            # 3. Industry Context
+            if industry_trends:
+                advice_parts.append("\n🌟 Industry Trend Alignment:")
+                for trend in industry_trends[:2]:
+                    advice_parts.append(f"- Consider: {trend}")
+
+            # Analyze sentiment distribution
+            total_feedback = len(feedback_list)
+            if total_feedback > 0:
+                pos_ratio = len(positives) / total_feedback
+                neg_ratio = len(negatives) / total_feedback
+                
+                # Engagement analysis
+                high_engagement = [fb for fb in feedback_list if fb.get('engagement', 0) > 100]
+                if high_engagement:
+                    advice_parts.append(f"- 🔥 {len(high_engagement)} high-engagement feedback items identified.")
+                    most_engaging = max(high_engagement, key=lambda x: x.get('engagement', 0))
+                    themes = extract_themes([fb['comment'] for fb in high_engagement])
+                    if themes:
+                        top_theme = list(themes.keys())[0]
+                        advice_parts.append(f"- 📱 High engagement around '{top_theme}'. Consider featuring in marketing.")
+
+            # 5. Competitive Edge
+            if positive_themes and negative_themes:
+                unique_positives = set(positive_themes.keys()) - set(negative_themes.keys())
+                if unique_positives:
+                    advice_parts.append("\n� Unique Strengths to Emphasize:")
+                    for strength in list(unique_positives)[:2]:
+                        advice_parts.append(f"  * {strength.title()} advantage over competitors")
+                    for strength in list(unique_positives)[:2]:
+                        advice_parts.append(f"- Emphasize {strength} in marketing")
+
+            if not advice_parts:
+                advice_parts = ["Monitor feedback for actionable insights."]
+
+            return "\n".join(advice_parts)
+
+        except Exception as e:
+            print(f"Error analyzing feedback: {e}")
+            return "Unable to analyze feedback at this time. Please try again later."
     """Agent for tracking competitors and analyzing market positioning"""
     
     def __init__(self, coordinator):
