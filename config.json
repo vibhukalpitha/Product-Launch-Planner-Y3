@@ -1,0 +1,179 @@
+{
+  "app_config": {
+    "name": "Samsung Product Launch Planner",
+    "version": "1.0.0",
+    "description": "AI-powered product launch planning system for Samsung",
+    "company": "Samsung Electronics"
+  },
+  "api_keys": {
+    "alpha_vantage": "DGEBCURNQQIRTQSO",
+    "alpha_vantage_keys": [
+      "DGEBCURNQQIRTQSO",
+      "80GHZFY0ZTEZK8S0", 
+      "BR7BB9TM5IA67OF6",
+      "HDZAA70H8RT8ZF0S"
+    ],
+    "news_api": "bc49bd63babc47d38de4d6d706651c28",
+    "news_api_keys": [
+      "bc49bd63babc47d38de4d6d706651c28",
+      "1a4f2736a6fc4f329081ea7926b8b7f6",
+      "b3ba6e56041c4ce3b7c21b82bb2a34c1", 
+      "23ada135d1c14a1dbd18cfcbce4d0932"
+    ],
+    "youtube_api": "AIzaSyAgFqdc9TNTLreqaBj8UtwLF3zo114y41g",
+    "youtube_api_keys": [
+      "AIzaSyAgFqdc9TNTLreqaBj8UtwLF3zo114y41g",
+      "AIzaSyAd-FGiAsbnREWS19ZgpcUzOSW6FUP1yUA",
+      "AIzaSyDujm3G5SFYN1sZBQ77AiF8yj8XBkW1v9k",
+      "AIzaSyBY1d3K-oS7-g98Ud6PlrA0qL9ggh5LldE"
+    ],
+    "twitter_bearer": "AAAAAAAAAAAAAAAAAAAAAF634wEAAAAAxo3Qoiwmw4ureirdhU5tULeaylA%3DF9eAAk2FFIf3rUFgDXLV9plymAgXV6FKktBEAWOzmKtlnfFxcz",
+    "reddit_client_id": "9yZ8rLmY5iweGiOHyrpetA",
+    "reddit_client_secret": "xBNi_uDGE1uYVVmatz9YbctajM-U6A",
+    "census_api": "9d3978fcadae36d815276841668afe4572da91e1",
+    "world_bank": "no_key_required",
+    "facebook_marketing": "EAAPWeVxhCoBPsAmthYUV8ZCYjHSjrqHcJQ1Hh3yyqH4r9MiECOUxvbB2u3CCzucY2P28VMgc6uto2MclWU9FcVyTn5eRAXfAO9xbcbCOYFLyFZAlqMRblEmyrfDdxWGTlJGH2EmhcPYxAqFsS9JTf3inRaIfVyfGp1xpyUbTulhGPdlrBkyAyf4euJNY2ZCmtsgKlrPAleleCg7XCCnYTzTNCCYZCt67FVaFsEAiSFUqrJeP3YaMsgYHPnYKMXOixHCbcCiasSGEFXy",
+    "google_analytics": "AIzaSyBP_vHq4e0vCEPv64qEk3bLbd1b2i1oHKU",
+    "serp_api": "f59838bce4e0a007b2973667a115a7d553ca74ca5c8694210a9940b6fef2de03",
+    "fred": "487ccf86beabefd0c5d2d85af4db25fb",
+    "fred_keys": [
+      "487ccf86beabefd0c5d2d85af4db25fb",
+      "766c5bede3d1bbdd15252eefb481e744",
+      "b4a9f9936396f32c49ff45705439dadc",
+      "4cdc7d0bc6565916e4cde3d9c8f1020b"
+    ],
+    "instagram_data_source": "serpapi_and_web_scraping"
+  },
+  "rate_limits": {
+    "alpha_vantage": 5,
+    "alpha_vantage_total_daily": 100,
+    "news_api": 16,
+    "news_api_total_daily": 400,
+    "youtube_api": 10000,
+    "youtube_api_total_daily": 40000,
+    "twitter": 300,
+    "reddit": 100,
+    "serp_api": 100,
+    "fred": 120,
+    "fred_total_daily": 480,
+    "facebook": 200,
+    "default": 60
+  },
+  "cache_settings": {
+    "enabled": true,
+    "duration_hours": 24,
+    "max_size_mb": 100
+  },
+  "analysis_settings": {
+    "market_analysis": {
+      "historical_months": 36,
+      "forecast_months": 12,
+      "confidence_interval": 0.95
+    },
+    "competitor_analysis": {
+      "max_competitors": 5,
+      "sentiment_sample_size": 100,
+      "price_variance_threshold": 0.1
+    },
+    "customer_segmentation": {
+      "sample_size": 1000,
+      "n_clusters": 4,
+      "random_state": 42
+    },
+    "campaign_planning": {
+      "default_duration_days": 30,
+      "default_budget": 50000,
+      "roi_target": 200
+    }
+  },
+  "platform_settings": {
+    "social_media": {
+      "facebook": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 1.0
+      },
+      "instagram": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 1.2
+      },
+      "tiktok": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 0.8
+      },
+      "youtube": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 1.5
+      },
+      "twitter": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 1.3
+      },
+      "linkedin": {
+        "enabled": true,
+        "min_age": 18,
+        "cost_multiplier": 2.0
+      },
+      "snapchat": {
+        "enabled": true,
+        "min_age": 13,
+        "cost_multiplier": 1.1
+      }
+    }
+  },
+  "ui_settings": {
+    "theme": {
+      "primary_color": "#1f4e79",
+      "secondary_color": "#2e86ab",
+      "accent_color": "#f18f01",
+      "background_color": "#ffffff",
+      "text_color": "#333333"
+    },
+    "charts": {
+      "default_height": 400,
+      "color_palette": ["#1f4e79", "#2e86ab", "#a23b72", "#f18f01", "#c73e1d"],
+      "animation_duration": 500
+    }
+  },
+  "data_sources": {
+    "free_apis": {
+      "fake_store_api": {
+        "url": "https://fakestoreapi.com/products",
+        "enabled": true,
+        "rate_limit": 1000
+      },
+      "world_bank": {
+        "url": "https://api.worldbank.org/v2/country",
+        "enabled": true,
+        "rate_limit": 120
+      },
+      "fred_economic": {
+        "url": "https://api.stlouisfed.org/fred/series/observations",
+        "enabled": false,
+        "requires_key": true
+      }
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/app.log",
+    "max_size_mb": 10,
+    "backup_count": 5
+  },
+  "performance": {
+    "timeout_seconds": 30,
+    "max_retries": 3,
+    "retry_delay": 1.0,
+    "enable_caching": true,
+    "parallel_processing": true
+  },
+  "security": {
+    "encrypt_api_keys": false,
+    "session_timeout_minutes": 60,
+    "max_upload_size_mb": 10
+  }
+}
