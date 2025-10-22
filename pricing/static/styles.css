@@ -1,0 +1,10 @@
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#f7f8fb; color:#111 }
+.container { max-width:900px; margin:30px auto; padding:20px; background:white; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+.plans { display:flex; gap:12px; margin-bottom:20px }
+.plan-card { flex:1; border:1px solid #e6e9ef; padding:12px; border-radius:6px }
+.plan-card h3 { margin:0 0 8px 0 }
+.agents { display:flex; flex-direction:column; gap:8px }
+.agent-row { display:flex; gap:12px; align-items:center; padding:8px; border-bottom:1px solid #eef2f7 }
+.agent-name { width:200px; font-weight:600 }
+.agent-status { color:#6b7280; width:100px }
+select { padding:6px 8px }

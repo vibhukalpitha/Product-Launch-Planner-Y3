@@ -1,0 +1,20 @@
+[
+  {
+    "id": "free",
+    "name": "Free",
+    "price_per_month": 0,
+    "features": ["1 agent", "Basic analytics", "Community support"]
+  },
+  {
+    "id": "pro",
+    "name": "Pro",
+    "price_per_month": 29,
+    "features": ["5 agents", "Advanced analytics", "Email support"]
+  },
+  {
+    "id": "enterprise",
+    "name": "Enterprise",
+    "price_per_month": 199,
+    "features": ["Unlimited agents", "SLA support", "Advanced integrations"]
+  }
+]

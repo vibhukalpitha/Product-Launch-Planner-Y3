@@ -1,0 +1,364 @@
+{
+  "product": "Samsung Galaxy Buds",
+  "analysis_date": "2025-10-21T15:25:28.859534",
+  "methods_used": [
+    "SerpApi Instagram Search",
+    "News API Social Monitoring",
+    "Web Scraping"
+  ],
+  "data": {
+    "instagram_posts": [
+      {
+        "title": "Samsung Galaxy Buds: Which Model is Right for You?",
+        "link": "https://www.instagram.com/p/DP4TvrcDX7Y/",
+        "snippet": "Get the most out of your Samsung Galaxy device with the perfect earbuds. Compare prices and features of the Buds Live, Buds FE, Buds 2, Buds ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Upgrade to the Best: Samsung Galaxy Buds 3 vs Buds Pro",
+        "link": "https://www.instagram.com/p/DPplkQCEbCM/",
+        "snippet": "Are you tired of mediocre wireless earbuds? Look no further than the Samsung Galaxy Buds 3 and Buds Pro. In this video, we'll compare the ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "SamMobile on Instagram: \"Samsung Galaxy Buds 3 FE Hands ...",
+        "link": "https://www.instagram.com/reel/DNf0iHJMEi2/",
+        "snippet": "Control music, send text, check emails, and even live translation. GalaxyBuds three FE are launching globally on September 5th for 149 or euros.",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Samsung Galaxy Buds 3 Pro Review: AI-Powered Audio ...",
+        "link": "https://www.instagram.com/reel/DPQQNCCjtP8/",
+        "snippet": "Samsung Galaxy Buds 3 Pro Review: AI-Powered Audio Excellence ... Samsung's releasing a new Buds Pro and it's a Samsung Galaxy Buds three Pro.",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Samsung has announced the Galaxy Buds 3 FE. ...",
+        "link": "https://www.instagram.com/p/DNj85-XT5eU/",
+        "snippet": "It will feature two micro-OLED displays with 4,032 pixels per inch, totaling around 29 million pixels. The headset includes a detachable light ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Experience the Future of Audio with Samsung Galaxy Buds Core",
+        "link": "https://www.instagram.com/reel/DNNegbxxIKs/",
+        "snippet": "Get the latest on Samsung's innovative Galaxy Buds Core, from its stunning design to its exceptional audio quality. Perfect for music lovers ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Stay Connected on the Go with Galaxy Buds Pro and Watch 7",
+        "link": "https://www.instagram.com/reel/DL1hI48s1dE/",
+        "snippet": "These Samsung devices make it easy for me to monitor my health, take calls and reply to messages. The convenience is amazing and you should definitely join ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Discover the Samsung Galaxy Buds 3 FE: Comfort, Sound ...",
+        "link": "https://www.instagram.com/reel/DPjO-NPk580/",
+        "snippet": "In this video, Yat Kean reviews the Samsung Galaxy Buds 3 FE, highlighting its ergonomic design, active noise cancellation, and easy music ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "Dive into the Samsung Galaxy Buds 3 FE: Hands-on Review",
+        "link": "https://www.instagram.com/reel/DOLQi7FkgmR/",
+        "snippet": "Hands-on with the Samsung Galaxy Buds 3 FE Samsung's latest fan-edition wireless earbuds boast blade design, ANC, AI features, and more. More ...",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      },
+      {
+        "title": "With the new Galaxy Buds 3 / pro, activate the live-translation ...",
+        "link": "https://www.instagram.com/reel/DB9FbqlIkho/",
+        "snippet": "With the new Galaxy Buds 3 / pro, activate the live-translation feature with the click of a button. The future is now!",
+        "date": "",
+        "source": "instagram_via_serpapi"
+      }
+    ],
+    "relevant_hashtags": [
+      "#samsunggalaxybuds",
+      "#soundreimagined",
+      "#samsungphones",
+      "#earphones",
+      "#nextlevelaudio",
+      "#samsunggalaxy",
+      "#samsung"
+    ],
+    "competitor_presence": {
+      "AirPods": {
+        "instagram_results": 10,
+        "instagram_links": 10,
+        "estimated_recent_posts": 0,
+        "sample_posts": [
+          {
+            "title": "AirPods Official (@airpodsofficial)",
+            "link": "https://www.instagram.com/airpodsofficial/",
+            "snippet": "330 Followers, 7 Following, 58 Posts - AirPods Official (@airpodsofficial) on Instagram: \"\"",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          },
+          {
+            "title": "Apple just introduced the AirPods Pro 3 \u2014 and they come with ...",
+            "link": "https://www.instagram.com/reel/DOa0t4rjMbY/",
+            "snippet": "Powered by Apple Intelligence, they can translate conversations in real time, letting your iPhone speak another language as you talk. They're ...",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          },
+          {
+            "title": "Experience the Power of AirPods Pro 2 with Enhanced Noise ...",
+            "link": "https://www.instagram.com/reel/DP5mWDgjhyD/",
+            "snippet": "In this video, we explore the features and benefits of AirPods Pro 2, including their advanced noise cancellation and transparency mode.",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          }
+        ],
+        "analysis_date": "2025-10-21"
+      },
+      "Sony Headphones": {
+        "instagram_results": 10,
+        "instagram_links": 10,
+        "estimated_recent_posts": 0,
+        "sample_posts": [
+          {
+            "title": "Sony Electronics (@sonyelectronics)",
+            "link": "https://www.instagram.com/sonyelectronics/",
+            "snippet": "The official Instagram for Sony Electronics North America. Check out our most recent product drops \ud83d\udc47 linktr.ee/sonyelectronics1",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          },
+          {
+            "title": "Introducing the all-new @nfl Coach's Headset, designed ...",
+            "link": "https://www.instagram.com/p/DMGCuMERkbD/",
+            "snippet": "Custom-engineered in close collaboration with the NFL and its coaches, these headsets are built to deliver crystal-clear sideline communication.",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          },
+          {
+            "title": "SONY WH-1000XM6 Officiel Snyi NRF Football Headphones",
+            "link": "https://www.instagram.com/reel/DOMp9EdDhDP/",
+            "snippet": "Les SONY WH-1000XM6 sont les casques officiels de la NFL, le plus grand \u00e9v\u00e9nement sportif du monde. Con\u00e7us pour les amateurs de football ...",
+            "date": "",
+            "source": "instagram_via_serpapi"
+          }
+        ],
+        "analysis_date": "2025-10-21"
+      }
+    },
+    "social_sentiment": {
+      "total_mentions": 20,
+      "articles": [
+        {
+          "title": "Google Pixel Buds 2a Review: The Best Budget Earbuds",
+          "source": "Wired",
+          "publishedAt": "2025-10-14T11:00:00Z",
+          "url": "https://www.wired.com/review/google-pixel-buds-2a/",
+          "sentiment": "positive",
+          "positive_score": 1,
+          "negative_score": 0
+        },
+        {
+          "title": "This leaked Galaxy Buds 4 icon in One UI 8.5 shows another new look for Samsung",
+          "source": "Android Central",
+          "publishedAt": "2025-10-14T10:11:00Z",
+          "url": "https://www.androidcentral.com/accessories/earbuds/leaked-galaxy-buds-4-icon-one-ui-8-5-another-new-look-for-samsung",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "The Galaxy S26 Edge proves Samsung has an identity crisis",
+          "source": "Android Authority",
+          "publishedAt": "2025-10-17T09:30:21Z",
+          "url": "https://www.androidauthority.com/galaxy-s26-edge-cancellation-proves-samsung-problems-3607775/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Mejores televisores y dispositivos de sonido: vota en los Premios Xataka NordVPN 2025",
+          "source": "Xataka.com",
+          "publishedAt": "2025-10-15T10:00:38Z",
+          "url": "https://www.xataka.com/xataka/mejores-televisores-dispositivos-sonido-vota-premios-xataka-nordvpn-2025",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Samsung pretends Galaxy phones have Qi2 with new magnetic wireless chargers [Gallery]",
+          "source": "9to5google.com",
+          "publishedAt": "2025-10-15T21:20:00Z",
+          "url": "http://9to5google.com/2025/10/15/samsung-pretends-galaxy-phones-have-qi2-with-new-magnetic-wireless-chargers-gallery/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "OnePlus Makes Huge Double Free Offer To OnePlus 13 Buyers",
+          "source": "Forbes",
+          "publishedAt": "2025-10-18T13:22:24Z",
+          "url": "https://www.forbes.com/sites/jaymcgregor/2025/10/18/oneplus-13-discount-free-oneplus-watch-2-oneplus-buds-4-offer/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Finally! Samsung USA offers Galaxy S25 FE discounts without a trade-in",
+          "source": "SamMobile",
+          "publishedAt": "2025-10-14T13:37:14Z",
+          "url": "https://www.sammobile.com/news/finally-samsung-usa-offers-galaxy-s25-fe-discounts-without-a-trade-in/",
+          "sentiment": "positive",
+          "positive_score": 1,
+          "negative_score": 0
+        },
+        {
+          "title": "Deals: Galaxy Z Fold 7 $400 off, 65-inch The Frame Amazon low, Bose headphones $100 off, more",
+          "source": "9to5google.com",
+          "publishedAt": "2025-10-17T15:54:04Z",
+          "url": "http://9to5google.com/2025/10/17/deals-galaxy-z-fold-7-the-frame-bose-headphones/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Galaxy A15 users, think twice before you upgrade to the new A17",
+          "source": "SamMobile",
+          "publishedAt": "2025-10-16T11:03:53Z",
+          "url": "https://www.sammobile.com/news/galaxy-a15-users-think-twice-before-upgrade-to-new-a17/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "One UI 8.0 is here for the Galaxy F34!",
+          "source": "SamMobile",
+          "publishedAt": "2025-10-15T04:23:50Z",
+          "url": "https://www.sammobile.com/news/galaxy-f34-one-ui-8-0-update-released/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Galaxy Tab S9 grabs the One UI 8.0 update",
+          "source": "SamMobile",
+          "publishedAt": "2025-10-17T05:54:33Z",
+          "url": "https://www.sammobile.com/news/galaxy-tab-s9-one-ui-8-update-released/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Samsung's Galaxy Buds 3 Pro are Exceptionally Cheap Today, Save 26%",
+          "source": "Nextpit.com",
+          "publishedAt": "2025-10-18T23:00:00Z",
+          "url": "https://www.nextpit.com/deals/samsung-galaxy-buds-3-pro-headphones-deal-amazon-18-10-2025",
+          "sentiment": "positive",
+          "positive_score": 1,
+          "negative_score": 0
+        },
+        {
+          "title": "Google Pixel 9a Gets Serious Price Drop In New Deal",
+          "source": "Forbes",
+          "publishedAt": "2025-10-15T17:19:52Z",
+          "url": "https://www.forbes.com/sites/jaymcgregor/2025/10/15/google-pixel-9a-price-drop-pixel-10-deal-amazon-google-store/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Samsung Galaxy Buds 3 FE review: Fan Edition zorgt voor fijne ervaring",
+          "source": "Androidworld.nl",
+          "publishedAt": "2025-10-14T13:00:00Z",
+          "url": "https://androidworld.nl/reviews/samsung-galaxy-buds-3-fe-review/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "J\u2019ai test\u00e9 : remplacer mon iPhone par le Pixel 10 Pro XL pendant un mois",
+          "source": "Presse-citron",
+          "publishedAt": "2025-10-19T12:02:41Z",
+          "url": "https://www.presse-citron.net/test-google-pixel-10-pro-xl/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "Best Samsung Galaxy S25 Edge Cases and Accessories",
+          "source": "Android Headlines",
+          "publishedAt": "2025-10-17T17:50:50Z",
+          "url": "https://www.androidheadlines.com/best-samsung-galaxy-s25-edge-cases-and-accessories.html",
+          "sentiment": "positive",
+          "positive_score": 1,
+          "negative_score": 0
+        },
+        {
+          "title": "Land a FREE $100 Samsung credit ahead of the Android XR headset launch next week",
+          "source": "9to5Toys",
+          "publishedAt": "2025-10-15T10:42:50Z",
+          "url": "http://9to5toys.com/2025/10/15/free-samsung-credit-android-xr-headset-launch/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "La tienda de O2 crece y ya puedes elegir entre casi 60 m\u00f3viles, tablets o hasta Smart TV como cliente",
+          "source": "Adslzone.net",
+          "publishedAt": "2025-10-14T18:07:04Z",
+          "url": "https://www.adslzone.net/noticias/operadores/tienda-o2-catalogo-dispositivos/",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        },
+        {
+          "title": "S\u00e9ria Samsung Galaxy Tab\u202fS9 dost\u00e1va na Slovensku One UI \u202f8",
+          "source": "Mojandroid.sk",
+          "publishedAt": "2025-10-20T06:00:00Z",
+          "url": "https://www.mojandroid.sk/seria-samsung-galaxy-tab-s9-dostava-na-slovensku-one-ui-8/",
+          "sentiment": "positive",
+          "positive_score": 1,
+          "negative_score": 0
+        },
+        {
+          "title": "F\u00fcr Galaxy Handys: Samsung k\u00fcndigt Gro\u00dfes f\u00fcr November an",
+          "source": "Curved.de",
+          "publishedAt": "2025-10-16T11:15:55Z",
+          "url": "https://curved.de/news/fuer-galaxy-handys-samsung-kuendigt-grosses-fuer-november-an-780452",
+          "sentiment": "neutral",
+          "positive_score": 0,
+          "negative_score": 0
+        }
+      ],
+      "keywords_found": [],
+      "sources": [
+        "Wired",
+        "Mojandroid.sk",
+        "Forbes",
+        "Androidworld.nl",
+        "Adslzone.net",
+        "Presse-citron",
+        "Android Authority",
+        "9to5google.com",
+        "Nextpit.com",
+        "9to5Toys",
+        "SamMobile",
+        "Curved.de",
+        "Android Headlines",
+        "Xataka.com",
+        "Android Central"
+      ]
+    }
+  },
+  "insights": [
+    "Found 10 Instagram posts - good online presence",
+    "Trending keywords: galaxy, samsung, audio, buds:, which",
+    "Found 7 relevant hashtags for campaign use",
+    "Top hashtags: #samsunggalaxybuds, #soundreimagined, #samsungphones, #earphones, #nextlevelaudio",
+    "Competitors have 20 total Instagram results",
+    "Most active competitor on Instagram: AirPods",
+    "Overall social media sentiment is POSITIVE \u2705"
+  ]
+}

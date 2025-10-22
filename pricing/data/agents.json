@@ -1,0 +1,5 @@
+[
+  {"id": "agent_1", "name": "Alpha Agent", "plan_id": "free", "status": "active"},
+  {"id": "agent_2", "name": "Beta Agent", "plan_id": "pro", "status": "active"},
+  {"id": "agent_3", "name": "Gamma Agent", "plan_id": null, "status": "inactive"}
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "timestamp": "2025-10-22T03:11:33.615066Z",
+    "actor": "user",
+    "action": "feedback",
+    "details": {
+      "text": "it's very good"
+    }
+  }
+]
