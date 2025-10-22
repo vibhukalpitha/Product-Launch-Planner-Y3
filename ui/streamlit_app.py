@@ -1007,22 +1007,25 @@ def display_market_analysis(analysis_results):
             xaxis_title="📅 Date",
             yaxis_title="📦 Sales Volume (Units)",
             height=600,
-            margin=dict(t=120, b=120, l=80, r=80),
+            margin=dict(t=120, b=160, l=80, r=80),
             legend=dict(
                 orientation="h",
                 yanchor="top",
-                y=-0.12,
+                y=-0.15,
                 xanchor="center",
                 x=0.5,
                 bgcolor='rgba(255,255,255,0.9)',
                 bordercolor=samsung_blue,
-                borderwidth=1
+                borderwidth=1,
+                font=dict(size=11),
+                itemsizing='constant',
+                tracegroupgap=20
             ),
             annotations=[
                 dict(
                     text=annotation_text,
                     xref="paper", yref="paper",
-                    x=0.5, y=-0.28,
+                    x=0.5, y=-0.32,
                     showarrow=False,
                     font=dict(size=11, color="#5A5A5A"),
                     xanchor='center'

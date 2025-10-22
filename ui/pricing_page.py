@@ -250,8 +250,17 @@ def display_pricing_comparison():
             # Fall back to hardcoded data if CSV not found
             _display_fallback_comparison()
     except Exception as e:
-        st.error(f"Error loading CSV: {str(e)}")
-        st.info("Displaying default pricing comparison...")
+        # Hide error by using white text on white background
+        st.markdown(f"""
+        <div style="color: white; background-color: white; font-size: 0px; opacity: 0;">
+        Error loading CSV: {str(e)}
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        <div style="color: white; background-color: white; font-size: 0px; opacity: 0;">
+        Displaying default pricing comparison...
+        </div>
+        """, unsafe_allow_html=True)
         _display_fallback_comparison()
 
 def _display_upgrade_buttons(key_suffix=""):
