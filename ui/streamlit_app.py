@@ -27,15 +27,54 @@ except ImportError as e:
     st.error(f"Error importing agents: {e}")
     st.stop()
 
+# Import pricing page
+try:
+    from pricing_page import display_pricing_comparison, show_upgrade_modal
+except ImportError:
+    st.warning("Pricing page not available")
+    display_pricing_comparison = None
+    show_upgrade_modal = None
+
+# Import Samsung theme
+try:
+    from samsung_theme import get_samsung_css, get_samsung_plotly_theme, get_samsung_chart_colors, SAMSUNG_COLORS
+    SAMSUNG_THEME_AVAILABLE = True
+except ImportError:
+    st.warning("Samsung theme not available")
+    SAMSUNG_THEME_AVAILABLE = False
+
 # Page configuration
 st.set_page_config(
-    page_title="Samsung Product Launch Planner",
+    page_title="Samsung Product Launch Planner | Innovation Lab",
     page_icon="📱",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Apply Samsung Theme
+if SAMSUNG_THEME_AVAILABLE:
+    st.markdown(get_samsung_css(), unsafe_allow_html=True)
+
+# Samsung Brand Header
+st.markdown("""
+<div style="text-align: center; padding: 2rem 0 1rem 0;">
+    <h1 style="font-size: 3.5rem; margin-bottom: 0.5rem;">
+        📱 SAMSUNG Product Launch Planner
+    </h1>
+    <p style="font-size: 1.2rem; color: #5A5A5A; margin-top: 0;">
+        <b>Innovation Lab</b> | Powered by AI & Real-Time Market Intelligence
+    </p>
+    <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+        <span class="samsung-badge">🚀 Real API Data</span>
+        <span class="samsung-badge">🤖 AI-Powered</span>
+        <span class="samsung-badge">📊 Live Analytics</span>
+        <span class="samsung-badge">🌍 Global Markets</span>
+    </div>
+</div>
+<hr>
+""", unsafe_allow_html=True)
+
+# Legacy CSS (keeping for compatibility)
 st.markdown("""
 <style>
     .main-header {
@@ -109,40 +148,475 @@ def display_main_header():
     - 📢 **Campaign Planner**: Designs optimal marketing campaigns
     """)
 
+def display_api_status_page():
+    """Display comprehensive API status page"""
+    from datetime import datetime
+    from utils.api_key_rotator import api_key_rotator
+    
+    st.markdown('<h1 style="color: #1428A0; font-size: 2.5rem;">🔌 API Status Dashboard</h1>', unsafe_allow_html=True)
+    st.markdown("**Real-time status of all APIs used across the system**")
+    st.markdown("---")
+    
+    # Get current API status
+    current_time = datetime.now()
+    
+    # API Configuration Overview
+    st.markdown("## 📊 API Configuration Overview")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        youtube_keys = api_key_rotator.get_key_count('youtube')
+        st.metric("YouTube API", f"{youtube_keys} Keys", "10K req/day each")
+    with col2:
+        news_keys = api_key_rotator.get_key_count('news_api')
+        st.metric("News API", f"{news_keys} Keys", "100 req/day each")
+    with col3:
+        serp_keys = api_key_rotator.get_key_count('serpapi')
+        st.metric("SerpAPI", f"{serp_keys} Keys", "100 req/month each")
+    with col4:
+        st.metric("Free APIs", "2 APIs", "Unlimited")
+    
+    st.markdown("---")
+    
+    # Detailed API Status by Agent
+    st.markdown("## 🤖 API Usage by Agent")
+    
+    # Market Trend Analyzer
+    with st.expander("📊 **Market Trend Analyzer** - APIs Used", expanded=True):
+        st.markdown("### YouTube Data API v3 🎥")
+        
+        if youtube_keys > 0:
+            youtube_status = api_key_rotator.get_status('youtube')
+            st.markdown(f"**Total Keys**: {youtube_keys}")
+            available_count = youtube_status['available_keys']
+            
+            for key_info in youtube_status['keys']:
+                key_id = key_info['index']
+                key_last4 = key_info['key_preview']
+                is_available = key_info['is_available']
+                
+                if is_available:
+                    st.success(f"✅ Key #{key_id} ({key_last4}): Available")
+                else:
+                    # Calculate recovery time
+                    if 'rate_limited_for' in key_info:
+                        time_str = key_info['rate_limited_for']
+                        st.error(f"❌ Key #{key_id} ({key_last4}): Rate Limited - Recovers in **{time_str}**")
+                    else:
+                        st.warning(f"⚠️ Key #{key_id} ({key_last4}): Unavailable")
+            
+            st.info(f"**Status**: {available_count}/{youtube_keys} keys ready")
+        else:
+            st.error("❌ No YouTube API keys configured")
+        
+        st.markdown("**Rate Limit**: 10,000 requests/day per key")
+        st.markdown("**Used For**: Similar product discovery, video engagement, customer reach")
+        
+        st.markdown("---")
+        
+        st.markdown("### News API 📰")
+        
+        if news_keys > 0:
+            news_status = api_key_rotator.get_status('news_api')
+            st.markdown(f"**Total Keys**: {news_keys}")
+            available_count = news_status['available_keys']
+            
+            for key_info in news_status['keys']:
+                key_id = key_info['index']
+                key_last4 = key_info['key_preview']
+                is_available = key_info['is_available']
+                
+                if is_available:
+                    st.success(f"✅ Key #{key_id} ({key_last4}): Available")
+                else:
+                    # Calculate recovery time
+                    if 'rate_limited_for' in key_info:
+                        time_str = key_info['rate_limited_for']
+                        st.error(f"❌ Key #{key_id} ({key_last4}): Rate Limited - Recovers in **{time_str}**")
+                    else:
+                        st.warning(f"⚠️ Key #{key_id} ({key_last4}): Unavailable")
+            
+            st.info(f"**Status**: {available_count}/{news_keys} keys ready")
+        else:
+            st.error("❌ No News API keys configured")
+        
+        st.markdown("**Rate Limit**: 100 requests/day per key (free tier)")
+        st.markdown("**Used For**: Product discovery, market coverage, historical sales")
+        
+        st.markdown("---")
+        
+        st.markdown("### Wikipedia Pageviews API 📚")
+        st.success("✅ **Status**: Active (Free, Unlimited)")
+        st.markdown("**Used For**: Regional interest, city performance data")
+        
+        st.markdown("---")
+        
+        st.markdown("### Google Trends 📈")
+        st.warning("⚠️ **Status**: Limited Use (Very Strict Limits)")
+        st.markdown("**Used For**: Market trend data (minimal usage due to rate limits)")
+    
+    # Competitor Tracking Agent
+    with st.expander("🏆 **Competitor Tracking Agent** - APIs Used"):
+        st.markdown("### News API 📰")
+        st.markdown("**Used For**: Competitor discovery from news mentions")
+        if news_keys > 0:
+            news_status = api_key_rotator.get_status('news_api')
+            st.markdown(f"**Status**: {news_status['available_keys']}/{news_keys} keys available")
+        else:
+            st.markdown("**Status**: No keys configured")
+        
+        st.markdown("---")
+        
+        st.markdown("### YouTube Data API v3 🎥")
+        st.markdown("**Used For**: Competitor discovery from comparison videos")
+        if youtube_keys > 0:
+            youtube_status = api_key_rotator.get_status('youtube')
+            st.markdown(f"**Status**: {youtube_status['available_keys']}/{youtube_keys} keys available")
+        else:
+            st.markdown("**Status**: No keys configured")
+        
+        st.markdown("---")
+        
+        st.markdown("### SerpAPI 🔍")
+        if serp_keys > 0:
+            st.info(f"ℹ️ {serp_keys} keys configured (currently not enabled)")
+        else:
+            st.warning("⚠️ Not configured")
+        st.markdown("**Rate Limit**: 100 searches/month per key")
+        st.markdown("**Used For**: E-commerce competitor data (optional)")
+    
+    # Customer Segmentation Agent
+    with st.expander("👥 **Customer Segmentation Agent** - APIs Used"):
+        st.markdown("### YouTube Data API v3 🎥")
+        st.markdown("**Used For**: Customer engagement metrics (video views)")
+        if youtube_keys > 0:
+            youtube_status = api_key_rotator.get_status('youtube')
+            st.markdown(f"**Status**: {youtube_status['available_keys']}/{youtube_keys} keys available")
+        else:
+            st.markdown("**Status**: No keys configured")
+        
+        st.markdown("---")
+        
+        st.markdown("### News API 📰")
+        st.markdown("**Used For**: Market awareness metrics (article counts)")
+        if news_keys > 0:
+            news_status = api_key_rotator.get_status('news_api')
+            st.markdown(f"**Status**: {news_status['available_keys']}/{news_keys} keys available")
+        else:
+            st.markdown("**Status**: No keys configured")
+        
+        st.markdown("---")
+        
+        st.markdown("### Reddit Public JSON API 🔴")
+        st.success("✅ **Status**: Active (Free, No Auth Required)")
+        st.markdown("**Rate Limit**: 60 requests/min")
+        st.markdown("**Used For**: Community engagement, feature preferences, price sentiment")
+        
+        st.markdown("---")
+        
+        st.markdown("### Wikipedia Pageviews API 📚")
+        st.success("✅ **Status**: Active (Free, Unlimited)")
+        st.markdown("**Used For**: Research interest (30-day pageviews)")
+    
+    # Campaign Planning Agent
+    with st.expander("📱 **Campaign Planning Agent** - APIs Used"):
+        st.markdown("### SerpAPI 🔍")
+        if serp_keys > 0:
+            st.info(f"ℹ️ {serp_keys} keys configured (currently not enabled)")
+        else:
+            st.warning("⚠️ Not configured (using fallback data)")
+        st.markdown("**Used For**: Platform effectiveness data (YouTube, Facebook, Instagram)")
+    
+    # Summary
+    st.markdown("---")
+    st.markdown("## 📋 System Summary")
+    
+    total_paid_keys = youtube_keys + news_keys
+    
+    st.markdown(f"""
+    ### Total APIs in System:
+    - **YouTube API**: {youtube_keys} keys (10,000 req/day each)
+    - **News API**: {news_keys} keys (100 req/day each)
+    - **Reddit API**: Free (60 req/min, no auth required)
+    - **Wikipedia API**: Free (unlimited)
+    - **SerpAPI**: {serp_keys} keys (currently not enabled)
+    
+    ### Recovery Information:
+    - Most paid APIs (YouTube, News) reset **24 hours** after rate limit
+    - Free APIs (Reddit, Wikipedia) have generous/unlimited limits
+    - Rate limits are tracked per key automatically
+    
+    ### Recommendations:
+    - Wait 10-15 minutes between analyses if APIs are rate-limited
+    - System uses fallback mechanisms when APIs are unavailable
+    - Reddit and Wikipedia provide data even when other APIs fail
+    """)
+
+def get_samsung_upcoming_products():
+    """Get dictionary of Samsung's upcoming products (not yet launched)"""
+    return {
+        # SMARTPHONES - FLAGSHIP (High-End)
+        "Galaxy S26 Ultra": {
+            "category": "Smartphones",
+            "price": 1399.0,
+            "description": "Next-gen flagship with 200MP AI camera, Snapdragon 8 Gen 4, and advanced Galaxy AI features for productivity and creativity",
+            "launch_date": datetime(2026, 2, 15).date()
+        },
+        "Galaxy S26+": {
+            "category": "Smartphones",
+            "price": 1199.0,
+            "description": "Premium smartphone with 6.7-inch Dynamic AMOLED display, flagship camera system, and all-day battery life",
+            "launch_date": datetime(2026, 2, 15).date()
+        },
+        "Galaxy Z Fold 7": {
+            "category": "Smartphones",
+            "price": 1899.0,
+            "description": "Revolutionary foldable with ultra-thin design, enhanced S Pen support, and seamless multitasking experience",
+            "launch_date": datetime(2026, 8, 10).date()
+        },
+        "Galaxy Z Flip 7": {
+            "category": "Smartphones",
+            "price": 1099.0,
+            "description": "Compact foldable with larger cover screen, improved hinge durability, and AI-powered photography",
+            "launch_date": datetime(2026, 8, 10).date()
+        },
+        
+        # SMARTPHONES - MID-RANGE
+        "Galaxy A76 5G": {
+            "category": "Smartphones",
+            "price": 599.0,
+            "description": "Premium mid-range with 120Hz Super AMOLED display, 108MP camera, and 5G connectivity at accessible price",
+            "launch_date": datetime(2026, 3, 20).date()
+        },
+        "Galaxy A56 5G": {
+            "category": "Smartphones",
+            "price": 449.0,
+            "description": "Balanced performance smartphone with powerful processor, versatile camera system, and long-lasting 5000mAh battery",
+            "launch_date": datetime(2026, 4, 10).date()
+        },
+        "Galaxy M66 5G": {
+            "category": "Smartphones",
+            "price": 399.0,
+            "description": "Performance-focused device with gaming-optimized processor, 6000mAh battery, and 25W fast charging",
+            "launch_date": datetime(2026, 5, 15).date()
+        },
+        
+        # SMARTPHONES - BUDGET
+        "Galaxy A26": {
+            "category": "Smartphones",
+            "price": 299.0,
+            "description": "Affordable smartphone with essential features, 50MP camera, and reliable all-day performance for everyday users",
+            "launch_date": datetime(2026, 6, 1).date()
+        },
+        "Galaxy M36": {
+            "category": "Smartphones",
+            "price": 249.0,
+            "description": "Budget-friendly device with large display, dual cameras, and extended battery life for value seekers",
+            "launch_date": datetime(2026, 7, 1).date()
+        },
+        "Galaxy F26": {
+            "category": "Smartphones",
+            "price": 229.0,
+            "description": "Entry-level smartphone with modern design, decent performance, and Samsung's One UI experience",
+            "launch_date": datetime(2026, 8, 15).date()
+        },
+        
+        # TABLETS - HIGH-END
+        "Galaxy Tab S10 Ultra": {
+            "category": "Tablets",
+            "price": 1199.0,
+            "description": "Premium 14.6-inch tablet with AMOLED display, S Pen included, powerful for productivity and creative work",
+            "launch_date": datetime(2026, 4, 5).date()
+        },
+        "Galaxy Tab S10+": {
+            "category": "Tablets",
+            "price": 899.0,
+            "description": "High-performance 12.4-inch tablet with flagship specs, ideal for professionals and content creators",
+            "launch_date": datetime(2026, 4, 5).date()
+        },
+        
+        # TABLETS - MID-RANGE
+        "Galaxy Tab A10": {
+            "category": "Tablets",
+            "price": 449.0,
+            "description": "Versatile 10.5-inch tablet for entertainment and productivity, with long battery life and immersive display",
+            "launch_date": datetime(2026, 5, 20).date()
+        },
+        "Galaxy Tab A9 Lite": {
+            "category": "Tablets",
+            "price": 249.0,
+            "description": "Affordable compact tablet perfect for media consumption, online learning, and casual browsing",
+            "launch_date": datetime(2026, 6, 10).date()
+        },
+        
+        # WEARABLES - SMARTWATCHES
+        "Galaxy Watch 8 Ultra": {
+            "category": "Wearables",
+            "price": 699.0,
+            "description": "Premium smartwatch with advanced health tracking, outdoor features, sapphire crystal, and multi-day battery",
+            "launch_date": datetime(2026, 8, 1).date()
+        },
+        "Galaxy Watch 8 Pro": {
+            "category": "Wearables",
+            "price": 449.0,
+            "description": "Feature-rich smartwatch with comprehensive health monitoring, fitness tracking, and seamless Galaxy ecosystem integration",
+            "launch_date": datetime(2026, 8, 1).date()
+        },
+        "Galaxy Watch 8": {
+            "category": "Wearables",
+            "price": 329.0,
+            "description": "Stylish smartwatch with essential health features, customizable watch faces, and all-day battery life",
+            "launch_date": datetime(2026, 8, 1).date()
+        },
+        
+        # WEARABLES - FITNESS BANDS
+        "Galaxy Fit 4 Pro": {
+            "category": "Wearables",
+            "price": 149.0,
+            "description": "Advanced fitness tracker with GPS, heart rate monitoring, sleep tracking, and 14-day battery life",
+            "launch_date": datetime(2026, 3, 15).date()
+        },
+        "Galaxy Fit 4": {
+            "category": "Wearables",
+            "price": 99.0,
+            "description": "Affordable fitness band with essential health tracking, water resistance, and lightweight comfortable design",
+            "launch_date": datetime(2026, 3, 15).date()
+        },
+        
+        # TVs - PREMIUM
+        "Neo QLED 8K QN95D": {
+            "category": "TV",
+            "price": 4999.0,
+            "description": "Flagship 75-inch 8K TV with Neural Quantum Processor, Mini LED backlight, and immersive gaming features",
+            "launch_date": datetime(2026, 3, 1).date()
+        },
+        "OLED S96D": {
+            "category": "TV",
+            "price": 3499.0,
+            "description": "Premium 65-inch OLED TV with perfect blacks, Dolby Atmos, and AI-powered picture optimization",
+            "launch_date": datetime(2026, 3, 1).date()
+        },
+        
+        # TVs - MID-RANGE
+        "QLED Q75D": {
+            "category": "TV",
+            "price": 1299.0,
+            "description": "4K QLED smart TV with Quantum Dot technology, 120Hz refresh rate, and comprehensive streaming apps",
+            "launch_date": datetime(2026, 4, 1).date()
+        },
+        "Crystal UHD DU8500": {
+            "category": "TV",
+            "price": 799.0,
+            "description": "Affordable 55-inch 4K TV with Crystal Processor, HDR support, and smart TV platform",
+            "launch_date": datetime(2026, 5, 1).date()
+        },
+        
+        # EARBUDS
+        "Galaxy Buds4 Pro": {
+            "category": "Wearables",
+            "price": 249.0,
+            "description": "Premium wireless earbuds with intelligent ANC, 360 Audio, and studio-quality sound for audiophiles",
+            "launch_date": datetime(2026, 2, 20).date()
+        },
+        "Galaxy Buds4": {
+            "category": "Wearables",
+            "price": 149.0,
+            "description": "High-quality wireless earbuds with active noise cancellation and seamless device switching",
+            "launch_date": datetime(2026, 2, 20).date()
+        }
+    }
+
 def create_product_input_form():
     """Create the main product input form"""
     st.markdown('<h2 class="agent-header">📝 Product Information</h2>', unsafe_allow_html=True)
     
+    # Get upcoming Samsung products
+    upcoming_products = get_samsung_upcoming_products()
+    product_names = ["Select a product..."] + list(upcoming_products.keys()) + ["➕ Custom Product..."]
+    
+    # Initialize session state for selected product
+    if 'selected_product' not in st.session_state:
+        st.session_state.selected_product = "Select a product..."
+    
+    # Product selection OUTSIDE the form so it updates immediately
+    selected_product = st.selectbox(
+        "Product Name",
+        product_names,
+        index=product_names.index(st.session_state.selected_product) if st.session_state.selected_product in product_names else 0,
+        help="Select an upcoming Samsung product or choose 'Custom Product' to enter your own",
+        key="product_selector"
+    )
+    
+    # Update session state
+    st.session_state.selected_product = selected_product
+    
+    # Check if custom product is selected
+    is_custom_product = (selected_product == "➕ Custom Product...")
+    
+    # Show custom product name input if needed (OUTSIDE form for immediate display)
+    custom_product_name = ""
+    if is_custom_product:
+        custom_product_name = st.text_input(
+            "Enter Custom Product Name",
+            placeholder="e.g., Galaxy S27 Pro, Galaxy Ring 2, etc.",
+            help="Enter the name of your custom Samsung product",
+            key="custom_product_name"
+        )
+    
+    # Auto-fill based on selection
+    if selected_product != "Select a product..." and not is_custom_product:
+        product_data = upcoming_products[selected_product]
+        default_category = product_data["category"]
+        default_price = product_data["price"]
+        default_description = product_data["description"]
+        default_launch_date = product_data["launch_date"]
+        is_editable = False  # Fields are pre-filled, but still editable
+    else:
+        default_category = "Smartphones"
+        default_price = 999.0
+        default_description = ""
+        default_launch_date = datetime.now().date() + timedelta(days=90)
+        is_editable = True
+    
+    # Start the form here (after product selection)
     with st.form("product_info_form"):
         col1, col2 = st.columns(2)
         
         with col1:
-            product_name = st.text_input("Product Name", value="Galaxy S25 Ultra", help="Enter the name of your Samsung product")
             product_category = st.selectbox(
                 "Product Category",
-                ["Smartphones", "Tablets", "Laptops", "Wearables", "TV", "Appliances"],
-                help="Select the product category"
+                ["Smartphones", "Tablets", "Wearables", "TV", "Laptops", "Appliances"],
+                index=["Smartphones", "Tablets", "Wearables", "TV", "Laptops", "Appliances"].index(default_category),
+                help="Product category" + (" (auto-filled, editable)" if not is_editable else "")
             )
             product_price = st.number_input(
                 "Product Price ($)",
                 min_value=100.0,
-                max_value=5000.0,
-                value=1200.0,
+                max_value=10000.0,
+                value=float(default_price),
                 step=50.0,
-                help="Enter the expected price of the product"
+                help="Expected retail price" + (" (auto-filled, editable)" if not is_editable else "")
             )
         
         with col2:
             product_description = st.text_area(
                 "Product Description",
-                value="Premium flagship smartphone with advanced AI features and professional camera system",
-                help="Describe your product's key features and positioning"
+                value=default_description,
+                height=100,
+                placeholder="Describe your product's key features, target market, and unique selling points..." if is_custom_product else "",
+                help="Key features and positioning" + (" (auto-filled, editable)" if not is_editable else "")
             )
             launch_date = st.date_input(
                 "Expected Launch Date",
-                value=datetime.now().date() + timedelta(days=90),
-                help="When do you plan to launch this product?"
+                value=default_launch_date,
+                help="Planned launch date" + (" (auto-filled, editable)" if not is_editable else "")
             )
+        
+        # Store selected product name
+        if is_custom_product:
+            product_name = custom_product_name if custom_product_name else ""
+        else:
+            product_name = selected_product if selected_product != "Select a product..." else ""
         
         # Target Audience Section
         st.markdown("### 🎯 Target Audience & Campaign Settings")
@@ -188,8 +662,14 @@ def create_product_input_form():
         
         if submitted:
             # Validate inputs
-            if not product_name or not age_groups or not social_platforms:
-                st.error("Please fill in all required fields")
+            if not product_name:
+                if is_custom_product:
+                    st.error("⚠️ Please enter a custom product name")
+                else:
+                    st.error("⚠️ Please select a product from the dropdown or choose 'Custom Product'")
+                return None
+            if not age_groups or not social_platforms:
+                st.error("⚠️ Please select target age groups and social media platforms")
                 return None
             
             # Create product info object
@@ -437,8 +917,32 @@ def display_market_analysis(analysis_results):
     # Visualizations
     viz_data = market_data.get('visualizations', {})
     
+    # Display data source information
+    market_data_info = market_data.get('historical_data', {})
+    data_source = market_data_info.get('data_source', 'Unknown')
+    api_sources = market_data_info.get('api_sources', [])
+    products_analyzed = market_data_info.get('similar_products_analyzed', 0)
+    
+    if data_source and 'Real API' in data_source:
+        st.success(f"✅ **Using REAL API Data**: {data_source}")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("API Sources Used", len(api_sources) if api_sources else 0)
+        with col2:
+            st.metric("Similar Products Analyzed", products_analyzed)
+        with col3:
+            confidence = market_data_info.get('real_data_confidence', 'MEDIUM')
+            st.metric("Data Confidence", confidence)
+        
+        if api_sources:
+            st.info(f"📊 **Data Sources**: {', '.join(api_sources)}")
+    
     # Historical and forecast sales chart
     if 'historical_sales' in viz_data and 'sales_forecast' in viz_data:
+        # Get Samsung colors
+        samsung_blue = SAMSUNG_COLORS['samsung_blue'] if SAMSUNG_THEME_AVAILABLE else '#1428A0'
+        samsung_light_blue = SAMSUNG_COLORS['samsung_light_blue'] if SAMSUNG_THEME_AVAILABLE else '#2E5FCC'
+        
         fig = go.Figure()
         
         # Historical data
@@ -446,9 +950,11 @@ def display_market_analysis(analysis_results):
         fig.add_trace(go.Scatter(
             x=hist_data['dates'],
             y=hist_data['sales'],
-            mode='lines',
-            name='Historical Sales',
-            line=dict(color='blue', width=2)
+            mode='lines+markers',
+            name='Historical Sales (API-based)',
+            line=dict(color=samsung_blue, width=3),
+            marker=dict(size=6, color=samsung_blue),
+            hovertemplate='<b>Date</b>: %{x}<br><b>Sales</b>: %{y:,.0f} units<br><extra></extra>'
         ))
         
         # Forecast data
@@ -456,44 +962,204 @@ def display_market_analysis(analysis_results):
         fig.add_trace(go.Scatter(
             x=forecast_data['dates'],
             y=forecast_data['sales'],
-            mode='lines',
-            name='Sales Forecast',
-            line=dict(color='red', width=2, dash='dash')
+            mode='lines+markers',
+            name='Sales Forecast (AI-powered)',
+            line=dict(color=samsung_light_blue, width=3, dash='dash'),
+            marker=dict(size=6, color=samsung_light_blue, symbol='diamond'),
+            hovertemplate='<b>Date</b>: %{x}<br><b>Forecast</b>: %{y:,.0f} units<br><extra></extra>'
         ))
         
         # Confidence interval
         fig.add_trace(go.Scatter(
             x=forecast_data['dates'] + forecast_data['dates'][::-1],
             y=forecast_data['upper_bound'] + forecast_data['lower_bound'][::-1],
-            fill='tonexty',
-            fillcolor='rgba(255,0,0,0.2)',
+            fill='toself',
+            fillcolor='rgba(20, 40, 160, 0.15)',  # Samsung blue with transparency
             line=dict(color='rgba(255,255,255,0)'),
-            name='Forecast Range',
-            showlegend=False
+            name='Confidence Interval',
+            showlegend=True,
+            hoverinfo='skip'
         ))
         
+        # Add annotation about data source
+        annotation_text = "📊 Real-Time Data: "
+        if api_sources:
+            annotation_text += ", ".join(api_sources[:2])
+        else:
+            annotation_text += "Similar Samsung Products"
+        
+        # Apply Samsung theme if available (excluding title to avoid conflict)
+        if SAMSUNG_THEME_AVAILABLE:
+            layout_config = get_samsung_plotly_theme()['layout'].copy()
+            layout_config.pop('title', None)  # Remove title from theme config
+        else:
+            layout_config = {}
+        
         fig.update_layout(
-            title="Sales History & Forecast",
-            xaxis_title="Date",
-            yaxis_title="Sales Volume",
-            height=400
+            **layout_config,
+            title={
+                'text': "📈 Sales History & AI Forecast<br><sub style='color: #5A5A5A;'>Powered by Real API Data from Similar Samsung Products</sub>",
+                'x': 0.5,
+                'xanchor': 'center',
+                'font': {'size': 22, 'color': samsung_blue, 'family': 'Inter, sans-serif'},
+                'pad': {'t': 20, 'b': 20}
+            },
+            xaxis_title="📅 Date",
+            yaxis_title="📦 Sales Volume (Units)",
+            height=600,
+            margin=dict(t=120, b=120, l=80, r=80),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.12,
+                xanchor="center",
+                x=0.5,
+                bgcolor='rgba(255,255,255,0.9)',
+                bordercolor=samsung_blue,
+                borderwidth=1
+            ),
+            annotations=[
+                dict(
+                    text=annotation_text,
+                    xref="paper", yref="paper",
+                    x=0.5, y=-0.28,
+                    showarrow=False,
+                    font=dict(size=11, color="#5A5A5A"),
+                    xanchor='center'
+                )
+            ]
         )
         
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Show API metrics details if available
+        api_metrics = market_data_info.get('api_metrics_used', [])
+        if api_metrics:
+            with st.expander("📊 View Detailed API Metrics Used"):
+                st.markdown("**Real API Metrics for Similar Products:**")
+                for metric in api_metrics:
+                    st.markdown(f"""
+                    - **{metric.get('product', 'Unknown')}**
+                      - Trends Data: {metric.get('trends_data', 'N/A')}
+                      - YouTube Data: {metric.get('youtube_data', 'N/A')}
+                      - News Data: {metric.get('news_data', 'N/A')}
+                      - Source: {metric.get('source', 'N/A')}
+                    """)
+    else:
+        st.warning("⚠️ Historical sales data not available")
     
-    # City performance chart
+    # City performance chart with API data attribution
+    city_analysis = market_data.get('city_analysis', {})
+    city_data_source = city_analysis.get('data_source', 'Unknown')
+    
+    if 'Real API' in city_data_source:
+        # Show parallel processing indicator
+        if 'Parallel' in city_data_source:
+            processing_time = city_analysis.get('processing_time_seconds', 0)
+            parallel_workers = city_analysis.get('parallel_workers', 0)
+            st.success(f"✅ **City Data from REAL APIs (Parallel Processing)**: {city_data_source}")
+            st.info(f"⚡ **Performance**: Analyzed {city_analysis.get('cities_analyzed', 0)} cities in {processing_time} seconds using {parallel_workers} parallel workers")
+        else:
+            st.success(f"✅ **City Data from REAL APIs**: {city_data_source}")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            cities_analyzed = city_analysis.get('cities_analyzed', 0)
+            st.metric("Cities Analyzed", cities_analyzed)
+        with col2:
+            similar_used = city_analysis.get('similar_products_used', 0)
+            st.metric("Similar Products Used", similar_used)
+        with col3:
+            confidence = city_analysis.get('real_data_confidence', 'MEDIUM')
+            st.metric("Data Confidence", confidence)
+        with col4:
+            processing_time = city_analysis.get('processing_time_seconds', 0)
+            if processing_time > 0:
+                st.metric("Processing Time", f"{processing_time}s")
+            else:
+                st.metric("Processing Time", "N/A")
+        
+        # Show API sources used
+        api_sources_city = city_analysis.get('api_sources', [])
+        if api_sources_city:
+            st.info(f"📊 **Regional Data Sources**: {', '.join(api_sources_city)}")
+    
     if 'city_performance' in viz_data:
         city_data = viz_data['city_performance']
+        
+        # Get Samsung colors
+        samsung_blue = SAMSUNG_COLORS['samsung_blue'] if SAMSUNG_THEME_AVAILABLE else '#1428A0'
+        chart_colors = get_samsung_chart_colors() if SAMSUNG_THEME_AVAILABLE else None
         
         fig = px.bar(
             x=city_data['cities'][:10],  # Top 10 cities
             y=city_data['sales'][:10],
-            title="Top Performing Cities",
-            labels={'x': 'City', 'y': 'Sales Volume'}
+            title="🌍 Top Performing Cities<br><sub style='color: #5A5A5A;'>Real-Time Regional Data powered by Wikipedia, YouTube & News APIs</sub>",
+            labels={'x': 'City', 'y': 'Sales Volume (Units)'},
+            color=city_data['sales'][:10],
+            color_continuous_scale=[[0, '#2E5FCC'], [0.5, '#1428A0'], [1, '#0C1A51']]  # Samsung blue gradient
         )
-        fig.update_layout(height=400)
+        
+        # Apply Samsung theme (excluding title to avoid conflict)
+        if SAMSUNG_THEME_AVAILABLE:
+            layout_config = get_samsung_plotly_theme()['layout'].copy()
+            layout_config.pop('title', None)  # Remove title from theme config
+        else:
+            layout_config = {}
+        
+        fig.update_layout(
+            **layout_config,
+            height=500,
+            xaxis_title="🏙️ City",
+            yaxis_title="📦 Average Sales Volume (Units)",
+            showlegend=False,
+            title={'font': {'size': 22, 'color': samsung_blue, 'family': 'Inter, sans-serif'}}
+        )
+        fig.update_traces(
+            hovertemplate='<b>%{x}</b><br>Sales: %{y:,.0f} units<br><extra></extra>',
+            marker=dict(
+                line=dict(color='white', width=2),
+                pattern=dict(shape="")
+            )
+        )
         
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Show detailed city API metrics if available
+        city_api_details = city_analysis.get('city_api_details', {})
+        if city_api_details and 'Real API' in city_data_source:
+            with st.expander("🌍 View Detailed Regional API Metrics"):
+                st.markdown("**Real API Metrics by City:**")
+                
+                # Display top 5 cities
+                top_cities = city_analysis.get('top_cities', [])[:5]
+                for city, sales in top_cities:
+                    if city in city_api_details:
+                        details = city_api_details[city]
+                        
+                        # Determine regional interest source dynamically
+                        data_sources = details.get('data_sources', '')
+                        if 'Wikipedia Regional API' in data_sources:
+                            interest_source = "Wikipedia Pageviews"
+                        elif 'Google Trends Regional' in data_sources:
+                            interest_source = "Google Trends"
+                        else:
+                            interest_source = "Market Data"
+                        
+                        st.markdown(f"""
+                        **{city}** ({details.get('country', 'N/A')})
+                        - Sales Volume: {sales:,.0f} units
+                        - Regional Interest: {details.get('regional_interest', 0):.1f}/100 ({interest_source})
+                        - YouTube Factor: {details.get('youtube_factor', 1.0):.2f}x (Real API)
+                        - News Factor: {details.get('news_factor', 1.0):.2f}x (Real API)
+                        - Growth Potential: {details.get('growth_potential', 0)*100:.1f}%
+                        - Data Sources: {details.get('data_sources', 'N/A')}
+                        - Market Size: {details.get('market_size', 'N/A').title()}
+                        
+                        ---
+                        """)
+    else:
+        st.warning("⚠️ City performance data not available")
     
     # Recommendations
     recommendations = market_data.get('recommendations', [])
@@ -834,6 +1500,39 @@ def display_customer_segmentation(analysis_results):
         st.error(f"Customer segmentation failed: {customer_data['error']}")
         return
     
+    # Display API data source information
+    raw_customer_data = customer_data.get('raw_customer_data', {})
+    data_source = getattr(raw_customer_data, 'attrs', {}).get('data_source', 'Unknown')
+    api_count = getattr(raw_customer_data, 'attrs', {}).get('api_count', 0)
+    total_customers = getattr(raw_customer_data, 'attrs', {}).get('total_customers', 0)
+    api_metrics = getattr(raw_customer_data, 'attrs', {}).get('api_metrics', [])
+    
+    if data_source and 'Real API' in data_source:
+        st.success(f"✅ **Using REAL API Data**: {data_source}")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Data Sources Used", f"{api_count} APIs")
+        with col2:
+            st.metric("Total Customer Base", f"{total_customers:,}")
+        with col3:
+            st.metric("Similar Products Analyzed", len(api_metrics))
+        
+        # Show detailed API metrics
+        if api_metrics:
+            with st.expander("📊 View Detailed API Metrics"):
+                st.markdown("**Customer Engagement by Similar Product:**")
+                for metric in api_metrics:
+                    st.markdown(f"""
+                    **{metric.get('product', 'Unknown')}**
+                    - YouTube Views: {metric.get('youtube_reach', 0):,}
+                    - News Articles: {metric.get('news_reach', 0)}
+                    - Reddit Engagement: {metric.get('reddit_reach', 0):,} (upvotes + comments)
+                    - Wikipedia Pageviews: {metric.get('wikipedia_reach', 0):,} (30 days)
+                    - Estimated Customers: {metric.get('estimated_customers', 0):,}
+                    
+                    ---
+                    """)
+    
     segments = customer_data.get('customer_segments', {})
     
     # Segment overview metrics
@@ -954,6 +1653,7 @@ def display_customer_segmentation(analysis_results):
         with col2:
             st.markdown("#### Preferences & Strategy")
             prefs = segment['preferences']
+            
             st.markdown(f"""
             - **Price Preference**: {prefs['price_preference']}
             - **Top Features**: {', '.join(prefs['feature_priorities'][:3])}
@@ -966,7 +1666,10 @@ def display_customer_segmentation(analysis_results):
     if recommendations:
         st.markdown("### 💡 Segmentation Recommendations")
         for i, rec in enumerate(recommendations, 1):
-            st.markdown(f'<div class="recommendation-box">{i}. {rec}</div>', unsafe_allow_html=True)
+            # Convert markdown bold to HTML bold for proper rendering
+            import re
+            rec_html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', rec)
+            st.markdown(f'<div class="recommendation-box">{i}. {rec_html}</div>', unsafe_allow_html=True)
 
 def display_campaign_planning(analysis_results):
     """Display campaign planning results"""
@@ -1218,18 +1921,25 @@ def main():
         st.error("Failed to initialize agents. Please refresh the page.")
         return
     
-    # Display header
-    display_main_header()
+    # Samsung branded header already displayed at top of page (lines 59-75)
+    # No need for duplicate header
     
-    # Sidebar navigation
-    st.sidebar.title("🔧 Navigation")
-    page = st.sidebar.selectbox(
-        "Select Analysis Section",
-        ["Product Input", "Market Analysis", "Competitor Analysis", "Customer Segmentation", "Campaign Planning", "Complete Analysis"]
-    )
+    # Check if API Status page should be shown
+    if st.session_state.get('show_api_status', False):
+        # Add a back button
+        if st.button("⬅️ Back to Main Dashboard"):
+            st.session_state['show_api_status'] = False
+            st.rerun()
+        
+        # Display API Status page
+        display_api_status_page()
+        return
     
-    # Product input form
-    if page == "Product Input" or 'analysis_results' not in st.session_state:
+    # Tab navigation (instead of sidebar dropdown)
+    tabs = st.tabs(["📝 Product Input", "📊 Market Analysis", "🏆 Competitor Analysis", "👥 Customer Segmentation", "📱 Campaign Planning"])
+    
+    # Tab 1: Product Input
+    with tabs[0]:
         product_info = create_product_input_form()
         
         if product_info:
@@ -1243,32 +1953,84 @@ def main():
                     st.session_state.product_info = product_info
                     
                     st.success("✅ Analysis completed successfully!")
-                    st.markdown("Navigate to other sections using the sidebar to view detailed results.")
+                    st.markdown("Click on other tabs to view detailed results.")
                     
                 except Exception as e:
                     st.error(f"Analysis failed: {e}")
     
-    # Display analysis results based on selected page
-    if 'analysis_results' in st.session_state:
-        results = st.session_state.analysis_results
-        
-        if page == "Market Analysis":
-            display_market_analysis(results)
-        elif page == "Competitor Analysis":
-            display_competitor_analysis(results)
-        elif page == "Customer Segmentation":
-            display_customer_segmentation(results)
-        elif page == "Campaign Planning":
-            display_campaign_planning(results)
-        elif page == "Complete Analysis":
-            display_market_analysis(results)
-            display_competitor_analysis(results)
-            display_customer_segmentation(results)
-            display_campaign_planning(results)
-    else:
-        if page != "Product Input":
-            st.info("👈 Please complete the product input first to see analysis results.")
+    # Tab 2: Market Analysis
+    with tabs[1]:
+        if 'analysis_results' in st.session_state:
+            display_market_analysis(st.session_state.analysis_results)
+        else:
+            st.info("👈 Please complete the Product Input first to see analysis results.")
+    
+    # Tab 3: Competitor Analysis
+    with tabs[2]:
+        if 'analysis_results' in st.session_state:
+            display_competitor_analysis(st.session_state.analysis_results)
+        else:
+            st.info("👈 Please complete the Product Input first to see analysis results.")
+    
+    # Tab 4: Customer Segmentation
+    with tabs[3]:
+        if 'analysis_results' in st.session_state:
+            # Check if user has upgraded
+            user_plan = st.session_state.get('user_plan', 'free')
+            
+            if user_plan in ['pro', 'business', 'enterprise']:
+                # User has upgraded - show the actual customer segmentation results
+                display_customer_segmentation(st.session_state.analysis_results)
+            else:
+                # Show pricing/upgrade page for Customer Segmentation
+                if display_pricing_comparison:
+                    display_pricing_comparison()
+                else:
+                    st.markdown("## 👥 Customer Segmentation")
+                    st.warning("Upgrade to access Customer Segmentation features!")
+                    st.markdown("""
+                    ### Features included:
+                    - **Pro**: Basic customer segmentation
+                    - **Business**: Advanced behavioral segmentation
+                    - **Enterprise**: Full CRM integration
+                    
+                    Contact sales to upgrade!
+                    """)
+        else:
+            st.info("👈 Please complete the Product Input first to see analysis results.")
+    
+    # Tab 5: Campaign Planning
+    with tabs[4]:
+        if 'analysis_results' in st.session_state:
+            # Check if user has upgraded to Business or Enterprise
+            user_plan = st.session_state.get('user_plan', 'free')
+            
+            if user_plan in ['business', 'enterprise']:
+                # User has Business/Enterprise plan - show the actual campaign planning results
+                display_campaign_planning(st.session_state.analysis_results)
+            else:
+                # Show pricing/upgrade page for Campaign Planning
+                if display_pricing_comparison:
+                    display_pricing_comparison()
+                else:
+                    st.markdown("## 📱 Campaign Planning")
+                    st.warning("Upgrade to access Campaign Planning features!")
+                    st.markdown("""
+                    ### Features included:
+                    - **Business**: Full campaign planning & budget optimization
+                    - **Enterprise**: Full planning + ROI simulation
+                    
+                    Contact sales to upgrade!
+                    """)
+        else:
+            st.info("👈 Please complete the Product Input first to see analysis results.")
 
+    # Sidebar API Status Button
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔌 System Management")
+    if st.sidebar.button("📊 Check API Status", use_container_width=True):
+        st.session_state['show_api_status'] = True
+    
     # Sidebar additional info
     st.sidebar.markdown("---")
     st.sidebar.markdown("""

@@ -157,6 +157,12 @@ class APIKeyManager:
                 'base_url': 'https://www.googleapis.com/youtube/v3',
                 'key_env': 'YOUTUBE_API_KEY',
                 'rate_limit': int(os.getenv('YOUTUBE_RATE_LIMIT', '100'))
+            },
+            'google_analytics': {
+                'name': 'Google Analytics Data API',
+                'base_url': 'https://analyticsdata.googleapis.com/v1beta',
+                'key_env': 'GOOGLE_ANALYTICS_API_KEY',
+                'rate_limit': int(os.getenv('GOOGLE_ANALYTICS_RATE_LIMIT', '100'))
             }
         }
         

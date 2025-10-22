@@ -61,6 +61,14 @@ except ImportError:
     real_data_available = False
     logging.warning("Real data connector not available, using simulated data")
 
+# Import Responsible AI Framework
+try:
+    from utils.responsible_ai_framework import rai_framework, BiasType, FairnessMetric
+    RAI_AVAILABLE = True
+except ImportError:
+    RAI_AVAILABLE = False
+    logging.warning("Responsible AI Framework not available")
+
 class CampaignPlanningAgent:
     def get_platform_campaign_details(self, platform: str, campaign_duration_days: int = 30) -> Dict[str, Any]:
         """
@@ -240,6 +248,14 @@ class CampaignPlanningAgent:
         self.name = "campaign_planner"
         self.coordinator.register_agent(self.name, self)
         # No hardcoded platform data. All discovery is API-driven.
+        
+        # Initialize Responsible AI Framework
+        if RAI_AVAILABLE:
+            self.rai_framework = rai_framework
+            print("+ Responsible AI Framework loaded for Campaign Planning Agent")
+        else:
+            self.rai_framework = None
+            print("! Responsible AI Framework not available")
 
     def discover_top_platforms(self, age_groups: List[str], top_n: int = 3) -> List[str]:
         """
@@ -301,7 +317,13 @@ class CampaignPlanningAgent:
         """
         Use SerpApi to fetch the average monthly ad cost for a platform. Returns USD cost or fallback value.
         """
-        from serpapi import GoogleSearch
+        try:
+            from serpapi import GoogleSearch
+        except ImportError:
+            # SerpAPI not available or incompatible version
+            print(f"[WARNING] SerpAPI not available for {platform}, using fallback data")
+            return self._get_fallback_ad_cost(platform)
+        
         import os
         api_key = os.environ.get('SERPAPI_API_KEY', 'demo')
         try:
@@ -325,7 +347,20 @@ class CampaignPlanningAgent:
                                 continue
             return cost
         except Exception:
-            return 1000
+            return self._get_fallback_ad_cost(platform)
+    
+    def _get_fallback_ad_cost(self, platform: str) -> float:
+        """Fallback ad cost data when SerpAPI is not available"""
+        fallback_costs = {
+            'facebook': 1000,
+            'instagram': 1200,
+            'twitter': 800,
+            'youtube': 1500,
+            'tiktok': 900,
+            'linkedin': 2000,
+            'snapchat': 700
+        }
+        return fallback_costs.get(platform.lower(), 1000)
 
     def analyze_platform_effectiveness(self, target_age_groups: List[str], selected_platforms: List[str] = None) -> Dict[str, Any]:
         """
@@ -704,6 +739,17 @@ class CampaignPlanningAgent:
                      customer_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Main method to plan marketing campaign. Handles empty/short platform lists gracefully."""
         print(f"Planning campaign for {product_info['name']}")
+        
+        # Initialize Responsible AI monitoring
+        rai_audit_entry = None
+        if self.rai_framework:
+            rai_audit_entry = self.rai_framework.create_audit_entry(
+                agent_name=self.name,
+                action="plan_campaign",
+                input_data=product_info,
+                output_data={}
+            )
+        
         try:
             # Extract campaign parameters from product info
             target_audience = product_info.get('target_audience', {})
@@ -712,6 +758,13 @@ class CampaignPlanningAgent:
             campaign_duration = target_audience.get('duration_days', 30)
             # Analyze platform effectiveness (API-driven, no selected_platforms)
             platform_analysis = self.analyze_platform_effectiveness(target_age_groups)
+            
+            # Responsible AI: Detect bias in platform selection
+            if self.rai_framework:
+                bias_results = self.rai_framework.detect_bias(platform_analysis, self.name, "platform_selection")
+                if bias_results:
+                    print(f"! Bias detected in platform selection: {[b.bias_type.value for b in bias_results]}")
+            
             # Defensive: If no platforms found, return a user-friendly error
             if not platform_analysis['top_3_platforms']:
                 return {
@@ -727,6 +780,8 @@ class CampaignPlanningAgent:
             )
             # Create visualizations
             visualizations = self.create_campaign_visualizations(platform_analysis, cost_analysis)
+            
+            # Build campaign plan
             campaign_plan = {
                 'product_info': {
                     'name': product_info['name'],
@@ -742,6 +797,37 @@ class CampaignPlanningAgent:
                 'success_metrics': self._define_success_metrics(cost_analysis),
                 'analysis_timestamp': datetime.now().isoformat()
             }
+            
+            # Responsible AI: Make ethical decisions and ensure transparency
+            ethical_decisions = []
+            transparency_report = {}
+            if self.rai_framework:
+                # Make ethical decision for campaign strategy
+                ethical_decision = self.rai_framework.make_ethical_decision(
+                    agent_name=self.name,
+                    decision_type="campaign_strategy",
+                    context={
+                        'product_info': product_info,
+                        'target_audience': target_audience,
+                        'platform_analysis': platform_analysis,
+                        'cost_analysis': cost_analysis
+                    }
+                )
+                ethical_decisions.append(ethical_decision)
+                
+                # Ensure transparency in campaign decisions
+                transparency_report = self.rai_framework.ensure_transparency(
+                    agent_name=self.name,
+                    decision=campaign_plan,
+                    explanation="Campaign strategy based on platform effectiveness analysis and budget optimization"
+                )
+                
+                # Add RAI features to campaign plan
+                campaign_plan.update({
+                    'ethical_decisions': ethical_decisions,
+                    'transparency_report': transparency_report,
+                    'rai_audit_entry': rai_audit_entry.entry_id if rai_audit_entry else None
+                })
             print("Campaign planning completed successfully")
             return campaign_plan
         except Exception as e:

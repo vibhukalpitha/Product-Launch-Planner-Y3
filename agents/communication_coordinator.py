@@ -7,6 +7,14 @@ from typing import Dict, Any, List
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
+# Import Responsible AI Framework
+try:
+    from utils.responsible_ai_framework import rai_framework, BiasType, FairnessMetric
+    RAI_AVAILABLE = True
+except ImportError:
+    RAI_AVAILABLE = False
+    # Framework will be initialized when coordinator is created
+
 @dataclass
 class ProductInfo:
     """Product information structure"""
@@ -39,6 +47,14 @@ class CommunicationCoordinator:
             'customer_segments': None,
             'campaign_plan': None
         }
+        
+        # Initialize Responsible AI Framework
+        if RAI_AVAILABLE:
+            self.rai_framework = rai_framework
+            print("+ Responsible AI Framework loaded for Communication Coordinator")
+        else:
+            self.rai_framework = None
+            # RAI Framework not available - will use standard processing
     
     def register_agent(self, agent_name: str, agent_instance):
         """Register an agent with the coordinator"""
@@ -79,6 +95,16 @@ class CommunicationCoordinator:
     def orchestrate_analysis(self, product_info: ProductInfo):
         """Orchestrate the complete analysis workflow"""
         print("Starting product launch analysis...")
+        
+        # Initialize Responsible AI monitoring for orchestration
+        rai_audit_entry = None
+        if self.rai_framework:
+            rai_audit_entry = self.rai_framework.create_audit_entry(
+                agent_name="coordinator",
+                action="orchestrate_analysis",
+                input_data=asdict(product_info),
+                output_data={}
+            )
         
         # Store product info
         self.update_shared_data('product_info', asdict(product_info))
@@ -135,6 +161,36 @@ class CommunicationCoordinator:
             )
             results['campaign_plan'] = campaign_result
             self.update_shared_data('campaign_plan', campaign_result)
+        
+        # Responsible AI: Generate comprehensive RAI report for orchestration
+        rai_report = {}
+        if self.rai_framework:
+            # Generate RAI report for the coordinator
+            rai_report = self.rai_framework.generate_rai_report("coordinator", "24h")
+            
+            # Make ethical decision for overall orchestration
+            ethical_decision = self.rai_framework.make_ethical_decision(
+                agent_name="coordinator",
+                decision_type="orchestration_complete",
+                context={
+                    'product_info': asdict(product_info),
+                    'results': results,
+                    'agents_used': list(self.agents.keys())
+                }
+            )
+            
+            # Ensure transparency in orchestration
+            transparency_report = self.rai_framework.ensure_transparency(
+                agent_name="coordinator",
+                decision=results,
+                explanation="Complete product launch analysis orchestrated across all agents"
+            )
+            
+            # Add RAI features to results
+            results['rai_report'] = rai_report
+            results['ethical_decisions'] = [ethical_decision]
+            results['transparency_report'] = transparency_report
+            results['rai_audit_entry'] = rai_audit_entry.entry_id if rai_audit_entry else None
         
         return results
 

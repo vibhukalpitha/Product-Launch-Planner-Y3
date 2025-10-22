@@ -26,6 +26,14 @@ except ImportError:
     discovery_available = False
     logging.warning("Real data connector or intelligent discovery not available, using simulated data")
 
+# Import Responsible AI Framework
+try:
+    from utils.responsible_ai_framework import rai_framework, BiasType, FairnessMetric
+    RAI_AVAILABLE = True
+except ImportError:
+    RAI_AVAILABLE = False
+    logging.warning("Responsible AI Framework not available")
+
 def simple_sentiment_analysis(text: str) -> float:
     """Simple rule-based sentiment analysis"""
     if not text:
@@ -173,10 +181,18 @@ class CompetitorTrackingAgent:
         # Initialize intelligent competitor discovery
         if discovery_available:
             self.competitor_discovery = IntelligentCompetitorDiscovery()
-            print("✅ Intelligent Competitor Discovery System loaded")
+            print("+ Intelligent Competitor Discovery System loaded")
         else:
             self.competitor_discovery = None
-            print("⚠️ Using basic competitor mapping")
+            print("! Using basic competitor mapping")
+        
+        # Initialize Responsible AI Framework
+        if RAI_AVAILABLE:
+            self.rai_framework = rai_framework
+            print("+ Responsible AI Framework loaded for Competitor Tracking Agent")
+        else:
+            self.rai_framework = None
+            print("! Responsible AI Framework not available")
         
         # Free APIs for competitor analysis
         self.apis = {
@@ -224,7 +240,7 @@ class CompetitorTrackingAgent:
         Returns:
             Comprehensive competitor discovery results
         """
-        print(f"🔍 Starting intelligent competitor discovery for: {product_name}")
+        print(f"[SEARCH] Starting intelligent competitor discovery for: {product_name}")
         
         if self.competitor_discovery:
             try:
@@ -235,16 +251,16 @@ class CompetitorTrackingAgent:
                     price_range=price_range
                 )
                 
-                print(f"✅ Intelligent discovery found:")
-                print(f"   🎯 {len(discovery_results['direct_competitors'])} direct competitors")
-                print(f"   🔄 {len(discovery_results['indirect_competitors'])} indirect competitors")
-                print(f"   🌟 {len(discovery_results['emerging_competitors'])} emerging competitors")
+                print(f"[SUCCESS] Intelligent discovery found:")
+                print(f"   [DIRECT] {len(discovery_results['direct_competitors'])} direct competitors")
+                print(f"   [INDIRECT] {len(discovery_results['indirect_competitors'])} indirect competitors")
+                print(f"   [EMERGING] {len(discovery_results['emerging_competitors'])} emerging competitors")
                 
                 return discovery_results
                 
             except Exception as e:
-                print(f"⚠️ Intelligent discovery failed: {e}")
-                print("🔄 Falling back to category-based discovery...")
+                print(f"[WARNING] Intelligent discovery failed: {e}")
+                print("[FALLBACK] Falling back to category-based discovery...")
         
         # Fallback to category-based discovery
         return self._fallback_competitor_discovery(product_name, category, price_range)
@@ -326,10 +342,10 @@ class CompetitorTrackingAgent:
         # Use discovered competitors if provided, otherwise fall back to category mapping
         if discovered_competitors:
             competitors = discovered_competitors[:6]  # Limit to top 6 for pricing analysis
-            print(f"📊 Analyzing pricing for {len(competitors)} discovered competitors")
+            print(f"[ANALYSIS] Analyzing pricing for {len(competitors)} discovered competitors")
         else:
             competitors = self.fallback_competitors.get(category.lower(), self.fallback_competitors['smartphones'])
-            print(f"📊 Using fallback competitors for pricing analysis")
+            print(f"[FALLBACK] Using fallback competitors for pricing analysis")
         
         # Simulate competitor pricing data
         competitor_prices = {}
@@ -436,7 +452,7 @@ class CompetitorTrackingAgent:
         if not competitors:
             return sentiment_data  # Return empty dict for empty competitor list
             
-        print(f"📊 Analyzing sentiment for {len(competitors)} competitors")
+        print(f"[ANALYSIS] Analyzing sentiment for {len(competitors)} competitors")
         
         for competitor in competitors:
             if self.use_real_data and self.real_data_connector:
@@ -453,7 +469,7 @@ class CompetitorTrackingAgent:
             sim = self._generate_simulated_sentiment(competitor, category)
             sentiment_data[competitor] = self._normalize_sentiment_output(sim)
             
-            print(f"✅ Generated sentiment data for {competitor}")
+            print(f"[SUCCESS] Generated sentiment data for {competitor}")
         
         return sentiment_data
 
@@ -886,11 +902,21 @@ class CompetitorTrackingAgent:
         product_price = product_info.get('price', 500)
         price_range = product_info.get('price_range', 'mid-range')
         
-        print(f"🔍 Analyzing competitors for {product_name} in {category}")
+        print(f"[ANALYSIS] Analyzing competitors for {product_name} in {category}")
+        
+        # Initialize Responsible AI monitoring
+        rai_audit_entry = None
+        if self.rai_framework:
+            rai_audit_entry = self.rai_framework.create_audit_entry(
+                agent_name=self.name,
+                action="analyze_competitors",
+                input_data=product_info,
+                output_data={}
+            )
         
         try:
             # Step 1: Intelligent Competitor Discovery
-            print("\n🤖 Step 1: Intelligent Competitor Discovery")
+            print("\n[STEP 1] Intelligent Competitor Discovery")
             discovery_results = self.discover_intelligent_competitors(
                 product_name=product_name,
                 category=category, 
@@ -903,10 +929,10 @@ class CompetitorTrackingAgent:
                 discovery_results['indirect_competitors']
             )
             
-            print(f"✅ Discovery complete! Analyzing {len(all_discovered_competitors)} competitors")
+            print(f"[SUCCESS] Discovery complete! Analyzing {len(all_discovered_competitors)} competitors")
             
             # Step 2: Competitor Pricing Analysis
-            print("\n💰 Step 2: Competitor Pricing Analysis")
+            print("\n[STEP 2] Competitor Pricing Analysis")
             pricing_analysis = self.get_competitor_pricing(
                 category=category,
                 product_price=product_price,
@@ -914,16 +940,33 @@ class CompetitorTrackingAgent:
             )
             
             # Step 3: Social Media Sentiment Analysis
-            print("\n📱 Step 3: Social Media Sentiment Analysis")
+            print("\n[STEP 3] Social Media Sentiment Analysis")
             sentiment_analysis = self.get_social_media_sentiment(
                 category=category,
                 competitors=all_discovered_competitors[:5]  # Top 5 for sentiment analysis
             )
             
+            # Responsible AI: Detect bias in competitor analysis
+            if self.rai_framework:
+                # Detect bias in competitor discovery
+                discovery_bias = self.rai_framework.detect_bias(discovery_results, self.name, "competitor_discovery")
+                if discovery_bias:
+                    print(f"! Bias detected in competitor discovery: {[b.bias_type.value for b in discovery_bias]}")
+                
+                # Detect bias in pricing analysis
+                pricing_bias = self.rai_framework.detect_bias(pricing_analysis, self.name, "pricing_analysis")
+                if pricing_bias:
+                    print(f"! Bias detected in pricing analysis: {[b.bias_type.value for b in pricing_bias]}")
+                
+                # Detect bias in sentiment analysis
+                sentiment_bias = self.rai_framework.detect_bias(sentiment_analysis, self.name, "sentiment_analysis")
+                if sentiment_bias:
+                    print(f"! Bias detected in sentiment analysis: {[b.bias_type.value for b in sentiment_bias]}")
+            
             # Step 4: (Removed recommendations logic)
             
             # Step 5: Create Visualizations
-            print("\n📊 Step 5: Creating Visualizations")
+            print("\n[STEP 5] Creating Visualizations")
             visualizations = self.create_visualizations(pricing_analysis, sentiment_analysis)
             
             # Compile comprehensive analysis result
@@ -932,7 +975,6 @@ class CompetitorTrackingAgent:
                 'competitor_discovery': discovery_results,
                 'pricing_analysis': pricing_analysis,
                 'sentiment_analysis': sentiment_analysis,
-
                 'visualizations': visualizations,
                 
                 # Metadata
@@ -953,17 +995,48 @@ class CompetitorTrackingAgent:
                 }
             }
             
-            print("\n✅ Comprehensive competitor analysis completed successfully!")
-            print(f"📊 Analysis Summary:")
-            print(f"   🎯 Direct Competitors: {len(discovery_results['direct_competitors'])}")
-            print(f"   🔄 Indirect Competitors: {len(discovery_results['indirect_competitors'])}")
-            print(f"   💰 Price Position: {pricing_analysis['competitive_position']['position']}")
-            print(f"   📈 Market Fragmentation: {discovery_results['market_insights']['market_analysis']['market_fragmentation']}")
+            # Responsible AI: Make ethical decisions and ensure transparency
+            ethical_decisions = []
+            transparency_report = {}
+            if self.rai_framework:
+                # Make ethical decision for competitor analysis
+                ethical_decision = self.rai_framework.make_ethical_decision(
+                    agent_name=self.name,
+                    decision_type="competitor_analysis",
+                    context={
+                        'product_info': product_info,
+                        'discovery_results': discovery_results,
+                        'pricing_analysis': pricing_analysis,
+                        'sentiment_analysis': sentiment_analysis
+                    }
+                )
+                ethical_decisions.append(ethical_decision)
+                
+                # Ensure transparency in competitor analysis
+                transparency_report = self.rai_framework.ensure_transparency(
+                    agent_name=self.name,
+                    decision=analysis_result,
+                    explanation="Competitor analysis based on intelligent discovery, pricing analysis, and sentiment analysis"
+                )
+                
+                # Add RAI features to result
+                analysis_result.update({
+                    'ethical_decisions': ethical_decisions,
+                    'transparency_report': transparency_report,
+                    'rai_audit_entry': rai_audit_entry.entry_id if rai_audit_entry else None
+                })
+            
+            print("\n[SUCCESS] Comprehensive competitor analysis completed successfully!")
+            print(f"[SUMMARY] Analysis Summary:")
+            print(f"   [DIRECT] Direct Competitors: {len(discovery_results['direct_competitors'])}")
+            print(f"   [INDIRECT] Indirect Competitors: {len(discovery_results['indirect_competitors'])}")
+            print(f"   [PRICE] Price Position: {pricing_analysis['competitive_position']['position']}")
+            print(f"   [MARKET] Market Fragmentation: {discovery_results['market_insights']['market_analysis']['market_fragmentation']}")
             
             return analysis_result
             
         except Exception as e:
-            print(f"❌ Error in competitor analysis: {e}")
+            print(f"X Error in competitor analysis: {e}")
             return {
                 'error': str(e),
                 'analysis_timestamp': datetime.now().isoformat(),

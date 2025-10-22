@@ -19,6 +19,7 @@ except ImportError:
     print("💡 Install pytrends for Google Trends data: pip install pytrends")
 
 from utils.api_manager import get_api_key, is_api_enabled, get_api_config
+from utils.api_key_rotator import get_rotated_api_key, handle_rate_limit
 
 class RealDataConnector:
     """Handles real data connections for market analysis"""
@@ -44,13 +45,14 @@ class RealDataConnector:
         current_time = time.time()
         if current_time - self.last_trends_request < self.trends_cooldown:
             wait_time = self.trends_cooldown - (current_time - self.last_trends_request)
-            print(f"⏳ Google Trends rate limit: waiting {wait_time:.1f}s...")
+            print(f"[WAIT] Google Trends rate limit: waiting {wait_time:.1f}s...")
             time.sleep(wait_time)
         
         try:
-            # Add random delay to avoid detection
+            # OPTIMIZED: Add longer random delay to avoid Google Trends rate limiting (429 errors)
+            # Increased from 2-5s to 20-30s to match other Google Trends calls
             import random
-            time.sleep(random.uniform(2, 5))
+            time.sleep(random.uniform(20, 30))
             
             # Initialize pytrends with timeout
             pytrends = TrendReq(hl='en-US', tz=360, timeout=(10, 25), retries=2, backoff_factor=0.1)
@@ -80,7 +82,7 @@ class RealDataConnector:
                 
                 # Cache the result
                 self._cache_data(cache_key, result_data)
-                print(f"✅ Google Trends data fetched successfully for {keyword}")
+                print(f"[OK] Google Trends data fetched successfully for {keyword}")
                 return result_data
             else:
                 print(f"⚠️ No Google Trends data available for {keyword}")
@@ -296,7 +298,7 @@ class RealDataConnector:
     
     def get_real_market_data(self, product_category: str, product_name: str) -> Dict[str, Any]:
         """Combine multiple real data sources for comprehensive market analysis"""
-        print(f"🌐 Fetching real market data for {product_name} in {product_category}...")
+        print(f"[API] Fetching real market data for {product_name} in {product_category}...")
         
         # Get data from multiple sources
         trends_data = self.get_google_trends_data(product_name, product_category)
@@ -498,132 +500,191 @@ class RealDataConnector:
         return sources if sources else ['Simulated Data']
     
     def get_youtube_metrics(self, query: str) -> Dict[str, Any]:
-        """Get YouTube videos for Samsung product discovery"""
+        """Get YouTube videos for Samsung product discovery with automatic key rotation"""
         if not is_api_enabled('youtube'):
-            print("⚠️ YouTube API not enabled")
+            print("[WARNING] YouTube API not enabled")
             return {}
         
         # Check cache first
         cache_key = f"youtube_{query}"
         if self._is_cached(cache_key):
-            print(f"📺 Using cached YouTube data for {query}")
+            print(f"[CACHE] Using cached YouTube data for {query}")
             return self.cache[cache_key]['data']
         
-        try:
-            api_key = get_api_key('youtube')
-            if not api_key:
-                print("⚠️ YouTube API key not found")
-                return {}
-            
-            # YouTube Data API v3 - Search for videos
-            url = "https://www.googleapis.com/youtube/v3/search"
-            params = {
-                'part': 'snippet',
-                'q': query,
-                'key': api_key,
-                'type': 'video',
-                'maxResults': 10,
-                'order': 'relevance',
-                'publishedAfter': '2020-01-01T00:00:00Z',  # Only recent videos
-                'regionCode': 'US',
-                'relevanceLanguage': 'en'
-            }
-            
-            print(f"🔍 Calling YouTube API for: {query}")
-            response = requests.get(url, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
+        max_retries = 5  # Try up to 5 different keys
+        for attempt in range(max_retries):
+            try:
+                # Get next available API key (with rotation)
+                api_key = get_rotated_api_key('youtube')
+                if not api_key:
+                    print("[WARNING] No YouTube API keys available")
+                    return {}
                 
-                videos = []
-                if 'items' in data:
-                    for item in data['items']:
-                        video_data = {
-                            'title': item['snippet']['title'],
-                            'description': item['snippet']['description'],
-                            'channel': item['snippet']['channelTitle'],
-                            'published_at': item['snippet']['publishedAt'],
-                            'video_id': item['id']['videoId'],
-                            'url': f"https://www.youtube.com/watch?v={item['id']['videoId']}"
-                        }
-                        videos.append(video_data)
-                
-                result = {
-                    'videos': videos,
-                    'total_results': len(videos),
-                    'query': query,
-                    'success': True
+                # YouTube Data API v3 - Search for videos
+                url = "https://www.googleapis.com/youtube/v3/search"
+                params = {
+                    'part': 'snippet',
+                    'q': query,
+                    'key': api_key,
+                    'type': 'video',
+                    'maxResults': 10,
+                    'order': 'relevance',
+                    'publishedAfter': '2020-01-01T00:00:00Z',  # Only recent videos
+                    'regionCode': 'US',
+                    'relevanceLanguage': 'en'
                 }
                 
-                # Cache the result
-                self._cache_data(cache_key, result)
-                print(f"✅ Found {len(videos)} YouTube videos for {query}")
-                return result
-            else:
-                print(f"❌ YouTube API error: {response.status_code} - {response.text}")
-                return {}
+                print(f"[CALL] Calling YouTube API for: {query} (attempt {attempt + 1})")
+                response = requests.get(url, params=params, timeout=30)
                 
-        except Exception as e:
-            print(f"❌ Error calling YouTube API: {e}")
-            return {}
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check for error in JSON response (YouTube returns 200 with error object)
+                    if 'error' in data:
+                        error_info = data['error']
+                        if 'quota' in str(error_info).lower() or error_info.get('code') == 403:
+                            print(f"[ROTATE] YouTube quota exceeded, rotating to next key...")
+                            handle_rate_limit('youtube', api_key)
+                            continue  # Try next key
+                        else:
+                            print(f"[ERROR] YouTube API error in response: {data}")
+                            return {}
+                    
+                    videos = []
+                    if 'items' in data:
+                        for item in data['items']:
+                            video_data = {
+                                'title': item['snippet']['title'],
+                                'description': item['snippet']['description'],
+                                'channel': item['snippet']['channelTitle'],
+                                'published_at': item['snippet']['publishedAt'],
+                                'video_id': item['id']['videoId'],
+                                'url': f"https://www.youtube.com/watch?v={item['id']['videoId']}"
+                            }
+                            videos.append(video_data)
+                    
+                    result = {
+                        'videos': videos,
+                        'total_results': len(videos),
+                        'query': query,
+                        'success': True
+                    }
+                    
+                    # Cache the result
+                    self._cache_data(cache_key, result)
+                    print(f"[OK] Found {len(videos)} YouTube videos for {query}")
+                    return result
+                    
+                elif response.status_code == 403:
+                    # Quota exceeded - mark key as rate limited and try next key
+                    error_data = response.json()
+                    if 'quota' in str(error_data).lower():
+                        print(f"[ROTATE] YouTube key rate limited, rotating to next key...")
+                        handle_rate_limit('youtube', api_key)
+                        continue  # Try next key
+                    else:
+                        print(f"[ERROR] YouTube API forbidden: {response.text}")
+                        return {}
+                        
+                elif response.status_code == 429:
+                    # Too many requests - rotate key
+                    print(f"[ROTATE] YouTube rate limit hit, rotating to next key...")
+                    handle_rate_limit('youtube', api_key)
+                    continue  # Try next key
+                    
+                else:
+                    print(f"[ERROR] YouTube API error: {response.status_code} - {response.text}")
+                    return {}
+                    
+            except Exception as e:
+                print(f"[ERROR] Error calling YouTube API: {e}")
+                if attempt < max_retries - 1:
+                    continue
+                return {}
+        
+        print(f"[WARNING] All YouTube API keys exhausted after {max_retries} attempts")
+        return {}
     
     def get_news_data(self, query: str, sources: str = None, language: str = 'en', 
                      sort_by: str = 'relevancy', page_size: int = 20) -> Dict[str, Any]:
-        """Get news articles for Samsung product discovery"""
+        """Get news articles for Samsung product discovery with automatic key rotation"""
         if not is_api_enabled('news_api'):
-            print("⚠️ News API not enabled")
+            print("[WARNING] News API not enabled")
             return {}
         
         # Check cache first
         cache_key = f"news_{query}_{sources}_{sort_by}"
         if self._is_cached(cache_key):
-            print(f"📰 Using cached news data for {query}")
+            print(f"[CACHE] Using cached news data for {query}")
             return self.cache[cache_key]['data']
         
-        try:
-            api_key = get_api_key('news_api')
-            if not api_key:
-                print("⚠️ News API key not found")
-                return {}
-            
-            # News API - Everything endpoint for comprehensive search
-            url = "https://newsapi.org/v2/everything"
-            params = {
-                'q': query,
-                'apiKey': api_key,
-                'language': language,
-                'sortBy': sort_by,
-                'pageSize': page_size,
-                'from': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'),  # Last year
-            }
-            
-            if sources:
-                params['sources'] = sources
-            
-            print(f"🔍 Calling News API for: {query}")
-            response = requests.get(url, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
+        max_retries = 3  # Try up to 3 different keys
+        for attempt in range(max_retries):
+            try:
+                # Get next available API key (with rotation)
+                api_key = get_rotated_api_key('news_api')
+                if not api_key:
+                    print("[WARNING] No News API keys available")
+                    return {}
                 
-                result = {
-                    'articles': data.get('articles', []),
-                    'total_results': data.get('totalResults', 0),
-                    'query': query,
-                    'success': True
+                # News API - Everything endpoint for comprehensive search
+                url = "https://newsapi.org/v2/everything"
+                # FIXED: Free News API plan only allows last 30 days - using 7 days to be safe
+                params = {
+                    'q': query,
+                    'apiKey': api_key,
+                    'language': language,
+                    'sortBy': sort_by,
+                    'pageSize': page_size,
+                    'from': (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d'),  # Last 7 days (free plan limitation)
                 }
                 
-                # Cache the result
-                self._cache_data(cache_key, result)
-                print(f"✅ Found {len(data.get('articles', []))} news articles for {query}")
-                return result
-            else:
-                print(f"❌ News API error: {response.status_code} - {response.text}")
-                return {}
+                if sources:
+                    params['sources'] = sources
                 
-        except Exception as e:
-            print(f"❌ Error calling News API: {e}")
-            return {}
+                print(f"[CALL] Calling News API for: {query} (attempt {attempt + 1})")
+                response = requests.get(url, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    result = {
+                        'articles': data.get('articles', []),
+                        'total_results': data.get('totalResults', 0),
+                        'query': query,
+                        'success': True
+                    }
+                    
+                    # Cache the result
+                    self._cache_data(cache_key, result)
+                    print(f"[OK] Found {len(data.get('articles', []))} news articles for {query}")
+                    return result
+                    
+                elif response.status_code == 429:
+                    # Rate limited - rotate to next key
+                    print(f"[ROTATE] News API rate limited, rotating to next key...")
+                    handle_rate_limit('news_api', api_key)
+                    continue  # Try next key
+                    
+                elif response.status_code == 401:
+                    # Invalid key
+                    print(f"[ERROR] News API authentication failed")
+                    handle_rate_limit('news_api', api_key)  # Mark as unusable
+                    continue
+                    
+                else:
+                    print(f"[ERROR] News API error: {response.status_code} - {response.text}")
+                    return {}
+                    
+            except Exception as e:
+                print(f"[ERROR] Error calling News API: {e}")
+                if attempt < max_retries - 1:
+                    continue
+                return {}
+        
+        print(f"[WARNING] All News API keys exhausted after {max_retries} attempts")
+        return {}
 
 # Global instance
 real_data_connector = RealDataConnector()

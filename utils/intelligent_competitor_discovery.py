@@ -67,7 +67,7 @@ class IntelligentCompetitorDiscovery:
         Returns:
             Comprehensive competitor analysis with confidence scores
         """
-        print(f"🔍 Discovering competitors for: {product_name}")
+        print(f"[SEARCH] Discovering competitors for: {product_name}")
         
         # Auto-detect category if not provided
         if not category:
@@ -88,23 +88,23 @@ class IntelligentCompetitorDiscovery:
         }
         
         # Discovery Method 1: Category-based baseline
-        print("📊 Getting category-based competitors...")
+        print("[ANALYSIS] Getting category-based competitors...")
         category_competitors = self._get_category_based_competitors(category)
         
         # Discovery Method 2: News and media analysis
-        print("📰 Analyzing news mentions...")
+        print("[NEWS] Analyzing news mentions...")
         news_competitors = self._discover_from_news_analysis(product_name, category)
         
         # Discovery Method 3: YouTube comparison videos
-        print("📺 Analyzing YouTube comparisons...")
+        print("[YOUTUBE] Analyzing YouTube comparisons...")
         youtube_competitors = self._discover_from_youtube_analysis(product_name)
         
         # Discovery Method 4: Product name pattern analysis
-        print("🔤 Analyzing product name patterns...")
+        print("[PATTERN] Analyzing product name patterns...")
         pattern_competitors = self._discover_from_product_patterns(product_name, category)
         
         # Discovery Method 5: E-commerce platform analysis
-        print("🛒 Analyzing e-commerce data...")
+        print("[ECOMMERCE] Analyzing e-commerce data...")
         ecommerce_competitors = self._discover_from_ecommerce_analysis(product_name, category)
         
         # Combine all discovery sources
@@ -129,7 +129,7 @@ class IntelligentCompetitorDiscovery:
             categorized, category, price_range
         )
         
-        print(f"✅ Discovery complete! Found {len(categorized['direct_competitors'])} direct competitors")
+        print(f"[SUCCESS] Discovery complete! Found {len(categorized['direct_competitors'])} direct competitors")
         return competitors_data
     
     def _detect_product_category(self, product_name: str) -> str:
@@ -219,7 +219,7 @@ class IntelligentCompetitorDiscovery:
                     'language': 'en',
                     'pageSize': 20,
                     'sortBy': 'relevancy',
-                    'from': (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+                    'from': (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')  # Last 7 days (free plan safe)
                 }
                 
                 response = requests.get(url, params=params, timeout=10)
@@ -239,7 +239,7 @@ class IntelligentCompetitorDiscovery:
             
             # Filter and deduplicate
             unique_competitors = list(set(all_competitors))
-            print(f"📰 Found {len(unique_competitors)} competitors from news analysis")
+            print(f"[NEWS] Found {len(unique_competitors)} competitors from news analysis")
             return unique_competitors[:10]  # Return top 10
             
         except Exception as e:
@@ -292,7 +292,7 @@ class IntelligentCompetitorDiscovery:
                 time.sleep(1)
             
             unique_competitors = list(set(all_competitors))
-            print(f"📺 Found {len(unique_competitors)} competitors from YouTube analysis")
+            print(f"[YOUTUBE] Found {len(unique_competitors)} competitors from YouTube analysis")
             return unique_competitors[:10]
             
         except Exception as e:
@@ -349,7 +349,7 @@ class IntelligentCompetitorDiscovery:
         unique_competitors = list(set(pattern_competitors))
         unique_competitors = [c for c in unique_competitors if c.lower() != 'samsung']
         
-        print(f"🔤 Found {len(unique_competitors)} competitors from pattern analysis")
+        print(f"[PATTERN] Found {len(unique_competitors)} competitors from pattern analysis")
         return unique_competitors
     
     def _discover_from_ecommerce_analysis(self, product_name: str, category: str) -> List[str]:
@@ -368,7 +368,7 @@ class IntelligentCompetitorDiscovery:
             min(len(ecommerce_competitors), 6)
         )
         
-        print(f"🛒 Found {len(selected_competitors)} competitors from e-commerce analysis")
+        print(f"[ECOMMERCE] Found {len(selected_competitors)} competitors from e-commerce analysis")
         return selected_competitors
     
     def _extract_brand_names_from_text(self, text: str) -> List[str]:
@@ -561,12 +561,12 @@ def demo_competitor_discovery():
     
     for product_name, category in test_products:
         print(f"\n{'='*80}")
-        print(f"🔍 TESTING: {product_name}")
+        print(f"[TEST] TESTING: {product_name}")
         print('='*80)
         
         result = discovery.discover_competitors(product_name, category)
         
-        print(f"\n📊 DISCOVERY RESULTS:")
+        print(f"\n[RESULTS] DISCOVERY RESULTS:")
         print(f"🎯 Direct Competitors ({len(result['direct_competitors'])}):")
         for comp in result['direct_competitors']:
             score = result['confidence_scores'].get(comp, 0)

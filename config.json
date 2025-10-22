@@ -9,6 +9,7 @@
     "alpha_vantage": "YOUR_ALPHA_VANTAGE_API_KEY",
     "news_api": "pubbed3e4f34e7ad4bd4c1ce94cc0b969d3a",
     "youtube_api": "AIzaSyDemoKey_ReplacWithRealKey",
+    "google_analytics": "AIzaSyBP_vHq4e0vCEPv64qEk3bLbd1b2i1oHKU",
     "twitter_bearer": "YOUR_TWITTER_BEARER_TOKEN",
     "reddit_client_id": "YOUR_REDDIT_CLIENT_ID",
     "reddit_client_secret": "YOUR_REDDIT_CLIENT_SECRET"
